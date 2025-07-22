@@ -176,6 +176,164 @@ app.post('/api/demo/payments/simulate', (req, res) => {
   });
 });
 
+// BitcoinSV Script Operations Reference
+app.get('/api/demo/script/sigops', (req, res) => {
+  const sigops = {
+    cryptographic: {
+      title: "Cryptographic Operations",
+      description: "Digital signatures, hashing, and cryptographic verification",
+      opcodes: [
+        {
+          name: "OP_CHECKSIG",
+          hex: "0xac",
+          description: "Verifies a signature against a public key and message hash",
+          example: "OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG"
+        },
+        {
+          name: "OP_CHECKSIGVERIFY",
+          hex: "0xad",
+          description: "Same as OP_CHECKSIG but fails the script if verification fails",
+          example: "OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIGVERIFY"
+        },
+        {
+          name: "OP_CHECKMULTISIG",
+          hex: "0xae",
+          description: "Verifies multiple signatures against multiple public keys",
+          example: "2 <pubKey1> <pubKey2> <pubKey3> 3 OP_CHECKMULTISIG"
+        },
+        {
+          name: "OP_CHECKMULTISIGVERIFY",
+          hex: "0xaf",
+          description: "Same as OP_CHECKMULTISIG but fails the script if verification fails",
+          example: "2 <pubKey1> <pubKey2> <pubKey3> 3 OP_CHECKMULTISIGVERIFY"
+        },
+        {
+          name: "OP_CHECKDATASIG",
+          hex: "0xba",
+          description: "Verifies a signature against arbitrary data (BitcoinSV extension)",
+          example: "<data> <signature> <publicKey> OP_CHECKDATASIG"
+        },
+        {
+          name: "OP_CHECKDATASIGVERIFY",
+          hex: "0xbb",
+          description: "Same as OP_CHECKDATASIG but fails the script if verification fails",
+          example: "<data> <signature> <publicKey> OP_CHECKDATASIGVERIFY"
+        }
+      ]
+    },
+    stack: {
+      title: "Stack Operations",
+      description: "Manipulate the stack - the core data structure of Bitcoin Script",
+      opcodes: [
+        {
+          name: "OP_DUP",
+          hex: "0x76",
+          description: "Duplicates the top stack item",
+          example: "<data> OP_DUP"
+        },
+        {
+          name: "OP_DROP",
+          hex: "0x75",
+          description: "Removes the top stack item",
+          example: "<data> OP_DROP"
+        },
+        {
+          name: "OP_SWAP",
+          hex: "0x7c",
+          description: "Swaps the top two stack items",
+          example: "<data1> <data2> OP_SWAP"
+        },
+        {
+          name: "OP_OVER",
+          hex: "0x78",
+          description: "Copies the second-to-top stack item to the top",
+          example: "<data1> <data2> OP_OVER"
+        },
+        {
+          name: "OP_ROT",
+          hex: "0x7b",
+          description: "Rotates the top three stack items",
+          example: "<data1> <data2> <data3> OP_ROT"
+        }
+      ]
+    },
+    flow: {
+      title: "Flow Control Operations",
+      description: "Control the execution flow and conditional logic in scripts",
+      opcodes: [
+        {
+          name: "OP_IF",
+          hex: "0x63",
+          description: "If the top stack item is true, execute the following code until OP_ELSE or OP_ENDIF",
+          example: "<condition> OP_IF <code> OP_ENDIF"
+        },
+        {
+          name: "OP_NOTIF",
+          hex: "0x64",
+          description: "If the top stack item is false, execute the following code until OP_ELSE or OP_ENDIF",
+          example: "<condition> OP_NOTIF <code> OP_ENDIF"
+        },
+        {
+          name: "OP_ELSE",
+          hex: "0x67",
+          description: "Marks the beginning of the else block in an if statement",
+          example: "<condition> OP_IF <code1> OP_ELSE <code2> OP_ENDIF"
+        },
+        {
+          name: "OP_ENDIF",
+          hex: "0x68",
+          description: "Marks the end of an if statement block",
+          example: "<condition> OP_IF <code> OP_ENDIF"
+        },
+        {
+          name: "OP_VERIFY",
+          hex: "0x69",
+          description: "Marks transaction as invalid if top stack value is not true",
+          example: "<condition> OP_VERIFY"
+        },
+        {
+          name: "OP_RETURN",
+          hex: "0x6a",
+          description: "Marks transaction as invalid. Used for data storage",
+          example: "OP_RETURN <data>"
+        }
+      ]
+    },
+    patterns: {
+      title: "Common Script Patterns",
+      description: "Frequently used BitcoinSV Script patterns and their use cases",
+      examples: [
+        {
+          name: "Pay-to-Public-Key-Hash (P2PKH)",
+          script: "OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG",
+          description: "Standard Bitcoin address script. Requires a public key and signature."
+        },
+        {
+          name: "Multi-Signature (2-of-3)",
+          script: "2 <pubKey1> <pubKey2> <pubKey3> 3 OP_CHECKMULTISIG",
+          description: "Requires 2 signatures from 3 possible public keys."
+        },
+        {
+          name: "Data Storage (OP_RETURN)",
+          script: "OP_RETURN <data>",
+          description: "Stores arbitrary data on the blockchain. Transaction is unspendable."
+        },
+        {
+          name: "Conditional Spending",
+          script: "<condition> OP_IF\n    <pubKey1> OP_CHECKSIG\nOP_ELSE\n    <pubKey2> OP_CHECKSIG\nOP_ENDIF",
+          description: "Allows spending with different keys based on a condition."
+        }
+      ]
+    }
+  };
+
+  res.json({
+    success: true,
+    data: sigops,
+    message: "BitcoinSV Script signature operations reference"
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error:', err);
