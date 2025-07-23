@@ -254,12 +254,20 @@ const burstRateLimiter = (points, duration, burstPoints, burstDuration) => {
   };
 };
 
+// Developer rate limiter (same as API rate limiter)
+const developerRateLimiter = apiRateLimiter;
+
+// Supplier rate limiter (same as API rate limiter)
+const supplierRateLimiter = apiRateLimiter;
+
 module.exports = {
   rateLimiter,
   authRateLimiter,
   apiRateLimiter,
   paymentRateLimiter,
   adminRateLimiter,
+  developerRateLimiter,
+  supplierRateLimiter,
   dynamicRateLimiter,
   ipRateLimiter,
   burstRateLimiter
