@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 const APIService = require('../models/APIService');
 const Payment = require('../models/Payment');
 
