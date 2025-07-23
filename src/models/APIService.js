@@ -1,322 +1,295 @@
 const mongoose = require('mongoose');
 
 const apiServiceSchema = new mongoose.Schema({
+  // Supplier (Business) Information
+  supplierId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  supplierName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  supplierEmail: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  
+  // API Service Details
   name: {
     type: String,
     required: true,
-    unique: true,
-    trim: true
-  },
-  slug: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
     trim: true
   },
   description: {
     type: String,
     required: true,
-    maxlength: 500
+    trim: true
   },
   category: {
     type: String,
     required: true,
-    enum: ['finance', 'weather', 'news', 'social', 'ecommerce', 'transport', 'health', 'education', 'entertainment', 'other']
+    enum: ['data', 'ai', 'payment', 'communication', 'analytics', 'other']
   },
-  baseUrl: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  endpoints: [{
-    name: String,
-    path: String,
-    method: {
-      type: String,
-      enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-      default: 'GET'
-    },
-    description: String,
-    parameters: [{
-      name: String,
-      type: String,
-      required: Boolean,
-      description: String,
-      defaultValue: String
-    }],
-    responseSchema: mongoose.Schema.Types.Mixed,
-    rateLimit: {
-      requests: Number,
-      window: Number // in seconds
-    }
-  }],
-  authentication: {
+  
+  // Pricing Configuration
+  pricing: {
     type: {
       type: String,
-      enum: ['none', 'api_key', 'bearer', 'basic', 'oauth2'],
-      default: 'none'
+      enum: ['per_call', 'per_minute', 'per_mb', 'subscription'],
+      required: true
     },
-    apiKeyHeader: String,
-    apiKeyValue: String,
-    bearerToken: String,
-    username: String,
-    password: String,
-    oauth2Config: {
-      clientId: String,
-      clientSecret: String,
-      tokenUrl: String,
-      scope: String
-    }
-  },
-  pricing: {
-    basePrice: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    pricePerRequest: {
+    amount: {
       type: Number,
       required: true,
       min: 0
     },
     currency: {
       type: String,
+      enum: ['satoshis', 'usd_cents'],
       default: 'satoshis'
     },
     freeTier: {
-      requests: {
+      calls: {
         type: Number,
         default: 0
       },
-      period: {
-        type: String,
-        enum: ['daily', 'weekly', 'monthly'],
-        default: 'daily'
+      amount: {
+        type: Number,
+        default: 0
       }
     }
   },
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'maintenance', 'deprecated'],
-    default: 'active'
-  },
-  healthCheck: {
-    endpoint: String,
-    expectedStatus: Number,
-    lastCheck: Date,
-    isHealthy: {
-      type: Boolean,
-      default: true
+  
+  // API Configuration
+  endpoint: {
+    url: {
+      type: String,
+      required: true,
+      trim: true
     },
-    responseTime: Number,
-    uptime: {
+    method: {
+      type: String,
+      enum: ['GET', 'POST', 'PUT', 'DELETE'],
+      default: 'GET'
+    },
+    headers: {
+      type: Map,
+      of: String,
+      default: {}
+    },
+    timeout: {
       type: Number,
-      default: 100
+      default: 30000 // 30 seconds
     }
   },
-  rateLimiting: {
-    enabled: {
+  
+  // Authentication
+  auth: {
+    type: {
+      type: String,
+      enum: ['none', 'api_key', 'bearer', 'basic', 'oauth2'],
+      default: 'none'
+    },
+    apiKey: {
+      type: String,
+      trim: true
+    },
+    bearerToken: {
+      type: String,
+      trim: true
+    },
+    username: {
+      type: String,
+      trim: true
+    },
+    password: {
+      type: String,
+      trim: true
+    }
+  },
+  
+  // Supplier Payment Configuration
+  paymentConfig: {
+    stablecoinAddress: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    stablecoinType: {
+      type: String,
+      enum: ['USDC', 'USDT', 'DAI'],
+      default: 'USDC'
+    },
+    minimumPayout: {
+      type: Number,
+      default: 1000 // $10.00 in cents
+    },
+    payoutSchedule: {
+      type: String,
+      enum: ['daily', 'weekly', 'monthly'],
+      default: 'weekly'
+    },
+    autoPayout: {
       type: Boolean,
       default: true
+    }
+  },
+  
+  // Service Status
+  status: {
+    type: String,
+    enum: ['draft', 'active', 'paused', 'suspended'],
+    default: 'draft'
+  },
+  
+  // Usage Statistics
+  stats: {
+    totalCalls: {
+      type: Number,
+      default: 0
     },
+    totalRevenue: {
+      type: Number,
+      default: 0
+    },
+    totalPayouts: {
+      type: Number,
+      default: 0
+    },
+    lastCall: {
+      type: Date
+    },
+    lastPayout: {
+      type: Date
+    }
+  },
+  
+  // Rate Limiting
+  rateLimit: {
     requestsPerMinute: {
       type: Number,
       default: 60
     },
-    burstLimit: {
-      type: Number,
-      default: 100
-    }
-  },
-  caching: {
-    enabled: {
-      type: Boolean,
-      default: true
-    },
-    ttl: {
-      type: Number,
-      default: 300 // 5 minutes
-    },
-    maxSize: {
+    requestsPerHour: {
       type: Number,
       default: 1000
+    },
+    requestsPerDay: {
+      type: Number,
+      default: 10000
     }
   },
-  metadata: {
-    version: String,
-    documentation: String,
-    website: String,
-    support: String,
-    tags: [String],
-    icon: String,
-    color: String
+  
+  // Documentation
+  documentation: {
+    description: String,
+    parameters: [{
+      name: String,
+      type: String,
+      required: Boolean,
+      description: String
+    }],
+    examples: [{
+      title: String,
+      description: String,
+      request: String,
+      response: String
+    }],
+    webhookUrl: String
   },
-  statistics: {
-    totalRequests: {
-      type: Number,
-      default: 0
-    },
-    successfulRequests: {
-      type: Number,
-      default: 0
-    },
-    failedRequests: {
-      type: Number,
-      default: 0
-    },
-    averageResponseTime: {
-      type: Number,
-      default: 0
-    },
-    revenue: {
-      type: Number,
-      default: 0
-    }
+  
+  // Metadata
+  tags: [String],
+  version: {
+    type: String,
+    default: '1.0.0'
   },
   isPublic: {
     type: Boolean,
     default: true
   },
-  createdBy: {
+  
+  // Audit Fields
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  },
+  approvedAt: Date,
+  approvedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   }
 }, {
   timestamps: true
 });
 
-// Indexes
-apiServiceSchema.index({ slug: 1 });
-apiServiceSchema.index({ category: 1 });
-apiServiceSchema.index({ status: 1 });
-apiServiceSchema.index({ isPublic: 1 });
-apiServiceSchema.index({ 'statistics.totalRequests': -1 });
-apiServiceSchema.index({ createdAt: -1 });
+// Indexes for performance
+apiServiceSchema.index({ supplierId: 1, status: 1 });
+apiServiceSchema.index({ category: 1, status: 1 });
+apiServiceSchema.index({ 'pricing.amount': 1 });
+apiServiceSchema.index({ tags: 1 });
 
-// Virtual for success rate
-apiServiceSchema.virtual('successRate').get(function() {
-  if (this.statistics.totalRequests === 0) return 0;
-  return (this.statistics.successfulRequests / this.statistics.totalRequests) * 100;
-});
-
-// Virtual for availability
-apiServiceSchema.virtual('availability').get(function() {
-  return this.healthCheck.isHealthy ? 'online' : 'offline';
-});
-
-// Instance methods
-apiServiceSchema.methods = {
-  // Update statistics
-  async updateStatistics(responseTime, success = true) {
-    this.statistics.totalRequests += 1;
-    this.statistics.averageResponseTime = 
-      (this.statistics.averageResponseTime * (this.statistics.totalRequests - 1) + responseTime) / this.statistics.totalRequests;
-    
-    if (success) {
-      this.statistics.successfulRequests += 1;
-    } else {
-      this.statistics.failedRequests += 1;
-    }
-    
-    return await this.save();
-  },
-
-  // Update health check
-  async updateHealthCheck(isHealthy, responseTime) {
-    this.healthCheck.isHealthy = isHealthy;
-    this.healthCheck.responseTime = responseTime;
-    this.healthCheck.lastCheck = new Date();
-    
-    return await this.save();
-  },
-
-  // Calculate price for request
-  calculatePrice(requestCount = 1) {
-    return this.pricing.basePrice + (this.pricing.pricePerRequest * requestCount);
-  },
-
-  // Check if user has free tier available
-  hasFreeTierAvailable(userUsage) {
-    if (this.pricing.freeTier.requests === 0) return false;
-    
-    const period = this.pricing.freeTier.period;
-    const now = new Date();
-    let startOfPeriod;
-    
-    switch (period) {
-      case 'daily':
-        startOfPeriod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case 'weekly':
-        const dayOfWeek = now.getDay();
-        const diff = now.getDate() - dayOfWeek;
-        startOfPeriod = new Date(now.getFullYear(), now.getMonth(), diff);
-        break;
-      case 'monthly':
-        startOfPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-    }
-    
-    const periodUsage = userUsage.filter(usage => 
-      new Date(usage.timestamp) >= startOfPeriod
-    ).reduce((sum, usage) => sum + usage.requests, 0);
-    
-    return periodUsage < this.pricing.freeTier.requests;
-  },
-
-  // Get endpoint by name
-  getEndpoint(name) {
-    return this.endpoints.find(endpoint => endpoint.name === name);
-  },
-
-  // Validate endpoint parameters
-  validateParameters(endpointName, params) {
-    const endpoint = this.getEndpoint(endpointName);
-    if (!endpoint) throw new Error('Endpoint not found');
-    
-    const requiredParams = endpoint.parameters.filter(p => p.required);
-    const missingParams = requiredParams.filter(p => !params[p.name]);
-    
-    if (missingParams.length > 0) {
-      throw new Error(`Missing required parameters: ${missingParams.map(p => p.name).join(', ')}`);
-    }
-    
-    return true;
+// Virtual for formatted pricing
+apiServiceSchema.virtual('formattedPricing').get(function() {
+  const { pricing } = this;
+  if (pricing.currency === 'satoshis') {
+    return `${pricing.amount} satoshis per ${pricing.type.replace('_', ' ')}`;
+  } else {
+    return `$${(pricing.amount / 100).toFixed(2)} per ${pricing.type.replace('_', ' ')}`;
   }
+});
+
+// Virtual for revenue in USD
+apiServiceSchema.virtual('revenueUSD').get(function() {
+  return this.stats.totalRevenue / 100; // Convert cents to dollars
+});
+
+// Methods
+apiServiceSchema.methods.incrementUsage = function(amount = 0) {
+  this.stats.totalCalls += 1;
+  if (amount > 0) {
+    this.stats.totalRevenue += amount;
+  }
+  this.stats.lastCall = new Date();
+  return this.save();
+};
+
+apiServiceSchema.methods.processPayout = function(amount) {
+  this.stats.totalPayouts += amount;
+  this.stats.lastPayout = new Date();
+  return this.save();
+};
+
+apiServiceSchema.methods.isEligibleForPayout = function() {
+  const pendingAmount = this.stats.totalRevenue - this.stats.totalPayouts;
+  return pendingAmount >= this.paymentConfig.minimumPayout;
 };
 
 // Static methods
-apiServiceSchema.statics = {
-  // Find by slug
-  async findBySlug(slug) {
-    return this.findOne({ slug, isPublic: true, status: 'active' });
-  },
-
-  // Find by category
-  async findByCategory(category) {
-    return this.find({ category, isPublic: true, status: 'active' });
-  },
-
-  // Get popular services
-  async getPopular(limit = 10) {
-    return this.find({ isPublic: true, status: 'active' })
-      .sort({ 'statistics.totalRequests': -1 })
-      .limit(limit);
-  },
-
-  // Get trending services
-  async getTrending(limit = 10) {
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return this.find({ 
-      isPublic: true, 
-      status: 'active',
-      updatedAt: { $gte: oneWeekAgo }
-    })
-    .sort({ 'statistics.totalRequests': -1 })
-    .limit(limit);
-  }
+apiServiceSchema.statics.findByCategory = function(category) {
+  return this.find({ category, status: 'active' });
 };
+
+apiServiceSchema.statics.findBySupplier = function(supplierId) {
+  return this.find({ supplierId });
+};
+
+apiServiceSchema.statics.findPublic = function() {
+  return this.find({ status: 'active', isPublic: true });
+};
+
+// Pre-save middleware
+apiServiceSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 module.exports = mongoose.model('APIService', apiServiceSchema); 

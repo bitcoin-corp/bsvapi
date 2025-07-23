@@ -3,20 +3,43 @@ const { logger } = require('../utils/logger');
 const APIService = require('../models/APIService');
 const { authenticateToken, authenticateApiKey, verifyUser } = require('../middleware/auth');
 const { apiRateLimiter } = require('../middleware/rateLimiter');
+const apiProxyService = require('../services/api-proxy-service');
 
 const router = express.Router();
 
 /**
  * @swagger
- * /api/apis/services:
+ * /api/apis/marketplace:
  *   get:
- *     summary: Get all available API services
+ *     summary: Browse API marketplace
  *     tags: [APIs]
  *     parameters:
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
+ *           enum: [data, ai, payment, communication, analytics, other]
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           description: Search by name or description
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           description: Minimum price in satoshis
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           description: Maximum price in satoshis
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [popular, price_low, price_high, newest]
+ *           default: popular
  *       - in: query
  *         name: limit
  *         schema:
@@ -29,43 +52,106 @@ const router = express.Router();
  *           default: 0
  *     responses:
  *       200:
- *         description: API services retrieved successfully
+ *         description: API marketplace data retrieved successfully
  */
-router.get('/services', async (req, res) => {
+router.get('/marketplace', async (req, res) => {
   try {
-    const { category, limit = 20, offset = 0 } = req.query;
+    const { 
+      category, 
+      search, 
+      minPrice, 
+      maxPrice, 
+      sort = 'popular', 
+      limit = 20, 
+      offset = 0 
+    } = req.query;
 
+    // Build query
     let query = { isPublic: true, status: 'active' };
+    
     if (category) {
       query.category = category;
     }
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
+      ];
+    }
+    
+    if (minPrice || maxPrice) {
+      query['pricing.amount'] = {};
+      if (minPrice) query['pricing.amount'].$gte = parseInt(minPrice);
+      if (maxPrice) query['pricing.amount'].$lte = parseInt(maxPrice);
+    }
+
+    // Build sort
+    let sortQuery = {};
+    switch (sort) {
+      case 'popular':
+        sortQuery = { 'stats.totalCalls': -1 };
+        break;
+      case 'price_low':
+        sortQuery = { 'pricing.amount': 1 };
+        break;
+      case 'price_high':
+        sortQuery = { 'pricing.amount': -1 };
+        break;
+      case 'newest':
+        sortQuery = { createdAt: -1 };
+        break;
+      default:
+        sortQuery = { 'stats.totalCalls': -1 };
+    }
 
     const services = await APIService.find(query)
-      .sort({ 'statistics.totalRequests': -1 })
+      .sort(sortQuery)
       .skip(parseInt(offset))
       .limit(parseInt(limit))
-      .select('-authentication.apiKeyValue -authentication.bearerToken -authentication.password');
+      .select('-auth.apiKey -auth.bearerToken -auth.password -auth.username');
 
     const total = await APIService.countDocuments(query);
 
+    // Get categories for filtering
+    const categories = await APIService.distinct('category', { isPublic: true, status: 'active' });
+
     res.json({
-      services: services.map(service => ({
-        id: service._id,
-        name: service.name,
-        slug: service.slug,
-        description: service.description,
-        category: service.category,
-        pricing: service.pricing,
-        status: service.status,
-        healthCheck: service.healthCheck,
-        statistics: service.statistics,
-        metadata: service.metadata
-      })),
-      pagination: {
-        total,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        hasMore: total > parseInt(offset) + services.length
+      marketplace: {
+        services: services.map(service => ({
+          id: service._id,
+          name: service.name,
+          description: service.description,
+          category: service.category,
+          pricing: {
+            type: service.pricing.type,
+            amount: service.pricing.amount,
+            currency: service.pricing.currency,
+            formattedPrice: service.formattedPricing
+          },
+          stats: {
+            totalCalls: service.stats.totalCalls,
+            totalRevenue: service.stats.totalRevenue,
+            lastCall: service.stats.lastCall
+          },
+          tags: service.tags,
+          version: service.version,
+          createdAt: service.createdAt
+        })),
+        filters: {
+          categories,
+          priceRange: {
+            min: await APIService.findOne({ isPublic: true, status: 'active' }).sort({ 'pricing.amount': 1 }).select('pricing.amount'),
+            max: await APIService.findOne({ isPublic: true, status: 'active' }).sort({ 'pricing.amount': -1 }).select('pricing.amount')
+          }
+        },
+        pagination: {
+          total,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          hasMore: total > parseInt(offset) + services.length
+        }
       }
     });
 
@@ -214,26 +300,108 @@ router.get('/proxy/:slug/:endpoint', authenticateApiKey, verifyUser, apiRateLimi
       });
     }
 
-    // TODO: Implement actual API proxy call
-    // This would involve:
-    // 1. Making the actual HTTP request to the external API
-    // 2. Handling authentication
-    // 3. Processing the response
-    // 4. Charging the user
-    // 5. Updating statistics
+    // Make the actual API proxy call
+    const result = await apiProxyService.proxyAPICall(
+      service._id,
+      endpoint,
+      queryParams,
+      req.currentUser._id,
+      req.apiKeyId
+    );
 
-    // For now, return a mock response
-    res.json({
-      message: 'API proxy call successful',
-      service: service.name,
-      endpoint: endpoint,
-      parameters: queryParams,
-      cost: price,
-      timestamp: new Date().toISOString()
-    });
+    res.json(result);
 
   } catch (error) {
     logger.error('API proxy error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to process API call'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/apis/call:
+ *   post:
+ *     summary: Make API call with POST request
+ *     tags: [APIs]
+ *     security:
+ *       - BearerAuth: []
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - serviceId
+ *               - endpoint
+ *             properties:
+ *               serviceId:
+ *                 type: string
+ *                 description: API service ID
+ *               endpoint:
+ *                 type: string
+ *                 description: API endpoint path
+ *               parameters:
+ *                 type: object
+ *                 description: Request parameters
+ *     responses:
+ *       200:
+ *         description: API call successful
+ *       400:
+ *         description: Invalid request
+ *       402:
+ *         description: Payment required
+ *       404:
+ *         description: Service not found
+ */
+router.post('/call', authenticateApiKey, verifyUser, apiRateLimiter, async (req, res) => {
+  try {
+    const { serviceId, endpoint, parameters = {} } = req.body;
+
+    if (!serviceId || !endpoint) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: 'serviceId and endpoint are required'
+      });
+    }
+
+    // Find the API service
+    const service = await APIService.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({
+        error: 'Service not found',
+        message: 'The specified API service does not exist'
+      });
+    }
+
+    // Make the API proxy call
+    const result = await apiProxyService.proxyAPICall(
+      serviceId,
+      endpoint,
+      parameters,
+      req.currentUser._id,
+      req.apiKeyId
+    );
+
+    res.json(result);
+
+  } catch (error) {
+    logger.error('API call error:', error);
+    
+    if (error.code === 'INSUFFICIENT_BALANCE') {
+      return res.status(402).json({
+        error: 'Insufficient balance',
+        message: 'Payment required to access this API',
+        data: {
+          paymentRequest: error.paymentRequest
+        }
+      });
+    }
+    
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to process API call'

@@ -17,6 +17,7 @@ const apiRoutes = require('./routes/apis');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
 const developerRoutes = require('./routes/developer');
+const supplierRoutes = require('./routes/supplier');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,7 @@ app.use('/api/apis', apiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/developer', developerRoutes);
+app.use('/api/supplier', supplierRoutes);
 
 // Setup Swagger documentation
 // setupSwagger(app);
