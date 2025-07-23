@@ -1,166 +1,115 @@
-# 🚀 BSV Micropayments API Platform - Complete Overview
+# BSV API Platform - Complete Platform Overview
 
-## 🎯 **What is BSVAPI.com?**
+## 🎯 **Business Model**
 
-BSVAPI.com is a **real production-ready micropayments API platform** that enables businesses to monetize their APIs through BitcoinSV micropayments. The platform acts as a gateway and marketplace where:
+BSV API is a **micropayments API marketplace** that enables businesses to monetize their APIs through BitcoinSV micropayments while receiving traditional payments.
 
-1. **Businesses (Suppliers)** register their APIs and set pricing
-2. **Developers** discover and use APIs via micropayments
-3. **BSVAPI.com** handles BSV payments, converts them to stablecoins, and pays suppliers without exchange risk
+### **How It Works:**
 
-## 🏗️ **Platform Architecture**
+1. **API Suppliers** register their APIs on the platform
+2. **Developers** pay BSV micropayments per API call
+3. **Platform** converts BSV to stablecoins immediately
+4. **Platform** pays suppliers via traditional methods (Stripe, PayPal, bank transfer)
 
-### Core Components
+### **Revenue Model:**
+- **Platform Fee**: 10% of each API call
+- **Supplier Payout**: 90% via traditional payment methods
+- **No Exchange Risk**: Suppliers receive stable payments in their preferred currency
+
+---
+
+## 🏗️ **Architecture Overview**
+
+### **Core Components:**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Developers    │    │   BSVAPI.com    │    │   Suppliers     │
-│                 │    │                 │    │                 │
-│ • API Keys      │◄──►│ • Payment Proc. │◄──►│ • API Services  │
-│ • Micropayments │    │ • Exchange Svc. │    │ • Stablecoin    │
-│ • API Calls     │    │ • Proxy Service │    │   Payouts       │
+│   Developers    │    │   BSV API       │    │   API Suppliers │
+│                 │    │   Platform      │    │                 │
+│ • API Keys      │◄──►│ • BSV Payments  │◄──►│ • Traditional   │
+│ • BSV Wallets   │    │ • Exchange      │    │   Payments      │
+│ • API Calls     │    │ • Proxy Service │    │ • Stripe/PayPal │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │   BSV Network   │
-                       │                 │
-                       │ • Transactions  │
-                       │ • Confirmations │
-                       │ • HD Wallets    │
-                       └─────────────────┘
 ```
 
-## 🔄 **How It Works**
+### **Payment Flow:**
 
-### 1. **Supplier Registration**
-Businesses register their APIs on BSVAPI.com:
+1. **Developer** makes API call with BSV micropayment
+2. **Platform** receives BSV and converts to stablecoins
+3. **Platform** deducts 10% fee and holds stablecoins
+4. **Platform** pays supplier via Stripe/PayPal/bank transfer
+5. **Supplier** receives payment in their preferred currency
 
-```bash
-POST /api/supplier/services
-{
-  "name": "Weather API",
-  "description": "Real-time weather data",
-  "category": "data",
-  "pricing": {
-    "type": "per_call",
-    "amount": 100,  // 100 satoshis per call
-    "currency": "satoshis"
-  },
-  "endpoint": {
-    "url": "https://api.weather.com/v1",
-    "method": "GET"
-  },
-  "auth": {
-    "type": "api_key",
-    "apiKey": "your_api_key"
-  },
-  "paymentConfig": {
-    "stablecoinAddress": "0x1234...",
-    "stablecoinType": "USDC",
-    "minimumPayout": 1000  // $10.00 minimum
-  }
-}
-```
-
-### 2. **Developer API Discovery**
-Developers browse the marketplace:
-
-```bash
-GET /api/apis/marketplace?category=data&sort=popular
-```
-
-### 3. **API Call with Micropayment**
-Developers make API calls with automatic micropayments:
-
-```bash
-POST /api/apis/call
-{
-  "serviceId": "api_service_id",
-  "endpoint": "/weather/current",
-  "parameters": {
-    "city": "London"
-  }
-}
-```
-
-### 4. **Payment Processing**
-1. **Check Balance**: Verify developer has sufficient BSV balance
-2. **Make API Call**: Proxy request to supplier's API
-3. **Process Payment**: Deduct BSV from developer's balance
-4. **Convert to Stablecoin**: Exchange BSV for USDC/USDT/DAI
-5. **Pay Supplier**: Send stablecoins to supplier's address
-
-## 💰 **Payment Flow**
-
-```
-Developer Balance: 1000 satoshis
-API Call Cost: 100 satoshis
-Supplier Share: 95 satoshis (after 5% BSVAPI fee)
-BSVAPI Fee: 5 satoshis
-
-1. Developer makes API call
-2. 100 satoshis deducted from developer balance
-3. 95 satoshis converted to ~$0.95 USDC (at current rate)
-4. USDC sent to supplier's address
-5. Supplier receives stablecoin payment immediately
-```
+---
 
 ## 🔧 **Technical Implementation**
 
-### Core Services
+### **Backend Stack:**
+- **Runtime**: Node.js with Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Caching**: Redis (optional, falls back to memory)
+- **Authentication**: JWT tokens
+- **Rate Limiting**: Express-rate-limit with Redis
+- **Logging**: Winston logger
+- **Validation**: Joi schema validation
 
-#### 1. **Payment Processor** (`src/services/payment-processor.js`)
-- BSV transaction creation and broadcasting
-- Payment monitoring and confirmation
+### **Key Services:**
+
+#### **1. Exchange Service**
+- Real-time BSV/USD exchange rates from multiple sources
+- Automatic conversion to stablecoins
+- Multi-currency support for supplier payouts
+- Traditional payment processing (Stripe, PayPal, bank transfer)
+
+#### **2. Payment Processor**
+- BSV micropayment creation and monitoring
+- Transaction confirmation tracking
 - Webhook notifications
-- Micropayment channels
+- Payment status management
 
-#### 2. **Exchange Service** (`src/services/exchange-service.js`)
-- Real-time BSV/USD exchange rates
-- Stablecoin conversion (USDC, USDT, DAI)
-- Supplier payout processing
-- Exchange rate monitoring
-
-#### 3. **API Proxy Service** (`src/services/api-proxy-service.js`)
-- HTTP request proxying to external APIs
+#### **3. API Proxy Service**
+- HTTP request forwarding to external APIs
 - Authentication handling
-- Payment processing integration
-- Error handling and retries
+- Payment verification before API calls
+- Response caching and error handling
 
-#### 4. **BSV Node Service** (`src/utils/bsv-node.js`)
-- HD wallet management
-- Address generation
-- Transaction creation
-- Network monitoring
+#### **4. Rate Limiting**
+- Per-user rate limiting
+- Per-API rate limiting
+- Burst protection
+- Dynamic rate adjustment
 
-### Database Models
+---
 
-#### 1. **APIService** (`src/models/APIService.js`)
+## 📊 **Database Schema**
+
+### **APIService Model:**
 ```javascript
 {
-  supplierId: ObjectId,
   name: String,
   description: String,
   category: String,
+  supplier: {
+    id: ObjectId,
+    name: String,
+    email: String
+  },
+  apiConfig: {
+    baseUrl: String,
+    endpoints: Array,
+    rateLimit: Object,
+    timeout: Number
+  },
   pricing: {
-    type: String,  // per_call, per_minute, per_mb, subscription
-    amount: Number,
+    model: String,
+    pricePerCall: Number,
     currency: String
   },
-  endpoint: {
-    url: String,
-    method: String,
-    headers: Map
-  },
-  auth: {
-    type: String,  // none, api_key, bearer, basic, oauth2
-    apiKey: String
-  },
   paymentConfig: {
-    stablecoinAddress: String,
-    stablecoinType: String,  // USDC, USDT, DAI
-    minimumPayout: Number
+    paymentMethod: String, // 'stripe', 'paypal', 'bank_transfer'
+    preferredCurrency: String,
+    minimumPayout: Number,
+    autoPayout: Boolean
   },
   stats: {
     totalCalls: Number,
@@ -170,202 +119,249 @@ BSVAPI Fee: 5 satoshis
 }
 ```
 
-#### 2. **Payment** (`src/models/Payment.js`)
+### **Payment Model:**
 ```javascript
 {
-  paymentId: String,
   userId: ObjectId,
-  type: String,  // api_call, deposit, supplier_payout
+  apiServiceId: ObjectId,
   amount: Number,
-  currency: String,
+  amountUSD: Number,
   status: String,
-  recipientAddress: String,
-  transactionId: String,
-  metadata: Object
-}
-```
-
-#### 3. **ApiKey** (`src/models/ApiKey.js`)
-```javascript
-{
-  userId: ObjectId,
-  key: String,
-  name: String,
-  permissions: [String],
-  rateLimit: Object,
-  isActive: Boolean,
-  usage: {
-    totalCalls: Number,
-    totalAmount: Number
+  supplierPayout: {
+    amount: Number,
+    currency: String,
+    method: String,
+    transactionId: String,
+    status: String
   }
 }
 ```
 
+---
+
 ## 🌐 **API Endpoints**
 
-### For Developers
-- `GET /api/apis/marketplace` - Browse available APIs
-- `POST /api/apis/call` - Make API call with micropayment
-- `GET /api/developer/keys` - Manage API keys
+### **Developer Endpoints:**
+- `POST /api/developer/register` - Developer registration
+- `POST /api/developer/login` - Developer authentication
+- `GET /api/developer/keys` - List API keys
 - `POST /api/developer/keys` - Create new API key
-- `GET /api/developer/stats` - View usage statistics
+- `DELETE /api/developer/keys/:id` - Delete API key
+- `GET /api/developer/balance` - Check BSV balance
+- `POST /api/developer/topup` - Add BSV to balance
+- `GET /api/developer/usage` - Usage statistics
 
-### For Suppliers
+### **Supplier Endpoints:**
+- `POST /api/supplier/register` - Supplier registration
+- `POST /api/supplier/login` - Supplier authentication
 - `POST /api/supplier/services` - Register API service
-- `GET /api/supplier/services` - View your services
-- `PUT /api/supplier/services/:id` - Update service
-- `GET /api/supplier/stats` - View revenue statistics
-- `POST /api/supplier/services/:id/pause` - Pause service
+- `PUT /api/supplier/services/:id` - Update API service
+- `GET /api/supplier/services` - List supplier services
+- `GET /api/supplier/earnings` - Earnings dashboard
+- `POST /api/supplier/payouts` - Request manual payout
 
-### For Payments
-- `POST /api/payments/create` - Create payment request
-- `GET /api/payments/:id` - Check payment status
-- `POST /api/payments/process` - Process payment
+### **API Marketplace:**
+- `GET /api/apis/marketplace` - Browse available APIs
+- `GET /api/apis/:id` - Get API details
+- `POST /api/apis/call` - Make API call with payment
+- `GET /api/apis/:id/documentation` - API documentation
 
-## 🔐 **Security Features**
-
-### Authentication
-- **JWT Tokens** for supplier authentication
-- **API Keys** for developer authentication
-- **Rate Limiting** per user and API key
-- **IP Whitelisting** for API keys
-
-### Payment Security
-- **HD Wallet** for secure address generation
-- **Multi-signature** support for large payments
-- **Transaction monitoring** for fraud detection
-- **Webhook verification** for payment confirmations
-
-### API Security
-- **Request validation** for all parameters
-- **Authentication proxying** to external APIs
-- **Error handling** without exposing sensitive data
-- **Rate limiting** to prevent abuse
-
-## 💱 **Exchange Integration**
-
-### Supported Exchanges
-- **Coinbase** (default)
-- **Binance**
-- **Kraken**
-
-### Stablecoin Support
-- **USDC** (Ethereum)
-- **USDT** (Ethereum)
-- **DAI** (Ethereum)
-
-### Exchange Rate Updates
-- Real-time rate fetching every minute
-- Automatic fallback to backup exchanges
-- Rate caching for performance
-- Historical rate tracking
-
-## 📊 **Analytics & Monitoring**
-
-### Supplier Analytics
-- Total API calls and revenue
-- Usage trends and patterns
-- Payout history and schedules
-- Service performance metrics
-
-### Developer Analytics
-- API usage statistics
-- Payment history
-- Balance tracking
-- Rate limit usage
-
-### Platform Analytics
-- Total transactions processed
-- Exchange rate statistics
-- Service availability metrics
-- Revenue and fee tracking
-
-## 🚀 **Deployment**
-
-### Environment Variables
-```bash
-# BSV Network
-BSV_NETWORK=mainnet
-BSV_NODE_URL=https://api.bitails.io
-BSV_MASTER_PRIVATE_KEY=your_hd_wallet_key
-
-# Exchange
-EXCHANGE_PROVIDER=coinbase
-EXCHANGE_API_KEY=your_exchange_key
-
-# Database
-MONGODB_URI=mongodb://localhost:27017/bsvapi
-REDIS_URL=redis://localhost:6379
-
-# Security
-JWT_SECRET=your_jwt_secret
-BSVAPI_FEE_PERCENTAGE=0.05
-```
-
-### Production Setup
-1. **Database**: MongoDB with authentication
-2. **Cache**: Redis for rate limiting
-3. **BSV Node**: Bitails.io or self-hosted
-4. **Exchange**: Coinbase Pro API
-5. **Monitoring**: Sentry + New Relic
-6. **SSL**: Let's Encrypt certificates
-
-## 📈 **Business Model**
-
-### Revenue Streams
-1. **Transaction Fees**: 5% of each API call
-2. **Exchange Spread**: Small margin on BSV/USD conversion
-3. **Premium Features**: Advanced analytics, priority support
-
-### Cost Structure
-1. **BSV Transaction Fees**: ~1000 satoshis per transaction
-2. **Exchange Fees**: ~0.1% per conversion
-3. **Infrastructure**: Servers, databases, monitoring
-4. **Development**: Platform maintenance and features
-
-## 🔮 **Future Features**
-
-### Planned Enhancements
-- **Multi-chain Support**: Ethereum, Polygon, Solana
-- **Subscription Models**: Monthly/yearly API access
-- **Advanced Analytics**: AI-powered insights
-- **Mobile SDKs**: iOS and Android libraries
-- **White-label Solutions**: Custom branded platforms
-- **DeFi Integration**: Yield farming for suppliers
-
-### Scalability
-- **Microservices Architecture**: Service decomposition
-- **Load Balancing**: Multiple server instances
-- **CDN Integration**: Global content delivery
-- **Database Sharding**: Horizontal scaling
-- **Caching Layers**: Redis clusters
-
-## 📞 **Support & Documentation**
-
-### Developer Resources
-- **API Documentation**: Swagger/OpenAPI specs
-- **SDKs**: JavaScript, Python, Go libraries
-- **Code Examples**: Complete integration guides
-- **Webhook Testing**: Sandbox environment
-
-### Supplier Resources
-- **Onboarding Guide**: Step-by-step setup
-- **Best Practices**: API design recommendations
-- **Pricing Strategies**: Revenue optimization
-- **Support Portal**: Ticket system
+### **Payment Endpoints:**
+- `POST /api/payments/create` - Create BSV micropayment
+- `GET /api/payments/:id/status` - Check payment status
+- `POST /api/payments/webhook` - Payment webhook handler
 
 ---
 
-## 🎉 **Ready for Production**
+## 🔐 **Security Features**
 
-The BSVAPI.com platform is **production-ready** and provides:
+### **Authentication & Authorization:**
+- JWT-based authentication
+- API key management with scopes
+- Role-based access control
+- Session management
 
-✅ **Real BSV micropayments** with blockchain integration  
-✅ **Automatic stablecoin conversion** and supplier payouts  
-✅ **Comprehensive API marketplace** for discovery  
-✅ **Secure authentication** and rate limiting  
-✅ **Real-time monitoring** and analytics  
-✅ **Scalable architecture** for growth  
-✅ **Complete documentation** and SDKs  
+### **Rate Limiting:**
+- Per-user rate limits
+- Per-API rate limits
+- IP-based rate limiting
+- Burst protection
 
-**Start monetizing your APIs with BSV micropayments today!** 
+### **Payment Security:**
+- BSV transaction verification
+- Double-spend protection
+- Payment confirmation tracking
+- Secure webhook handling
+
+### **Data Protection:**
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+- CORS configuration
+
+---
+
+## 💱 **Exchange Integration**
+
+### **Exchange Rate Sources:**
+- **Coinbase API** - Primary source
+- **Binance API** - Secondary source
+- **Kraken API** - Tertiary source
+- **Fallback**: Average of available rates
+
+### **Currency Support:**
+- **Input**: BSV (BitcoinSV)
+- **Platform**: USD stablecoins
+- **Output**: USD, EUR, GBP, CAD, AUD, JPY, CHF, SEK, NOK, DKK
+
+### **Payment Methods:**
+- **Stripe Connect** - For instant payouts
+- **PayPal Payouts** - For PayPal users
+- **Bank Transfer** - For traditional banking
+
+---
+
+## 📈 **Analytics & Monitoring**
+
+### **Platform Metrics:**
+- Total API calls processed
+- Total BSV volume
+- Total supplier payouts
+- Platform revenue
+- Exchange rate tracking
+
+### **API Performance:**
+- Response time monitoring
+- Success rate tracking
+- Error rate analysis
+- Usage patterns
+
+### **Supplier Analytics:**
+- Revenue per service
+- Call volume trends
+- Payout history
+- Performance metrics
+
+---
+
+## 🚀 **Deployment**
+
+### **Environment Configuration:**
+```bash
+# Database
+MONGODB_URI=mongodb://localhost:27017/bsvapi
+
+# Redis (optional)
+REDIS_URL=redis://localhost:6379
+
+# BSV Network
+BSV_NETWORK=mainnet
+BSV_NODE_URL=https://api.bitcoin.com
+
+# Exchange APIs
+COINBASE_API_KEY=your_key
+BINANCE_API_KEY=your_key
+KRAKEN_API_KEY=your_key
+
+# Payment Providers
+STRIPE_SECRET_KEY=sk_test_...
+PAYPAL_CLIENT_ID=your_client_id
+PAYPAL_SECRET=your_secret
+
+# JWT
+JWT_SECRET=your_jwt_secret
+```
+
+### **Production Deployment:**
+- **Platform**: Vercel
+- **Database**: MongoDB Atlas
+- **Redis**: Redis Cloud
+- **Monitoring**: Winston logging
+- **SSL**: Automatic via Vercel
+
+---
+
+## 💼 **Business Features**
+
+### **Supplier Onboarding:**
+- Simple registration process
+- API service configuration
+- Payment method setup
+- Documentation upload
+
+### **Developer Experience:**
+- API key management
+- Balance monitoring
+- Usage tracking
+- Documentation access
+
+### **Platform Management:**
+- Service approval workflow
+- Payment processing
+- Dispute resolution
+- Analytics dashboard
+
+---
+
+## 🔮 **Future Features**
+
+### **Planned Enhancements:**
+- **Multi-chain Support** - Support for other cryptocurrencies
+- **Advanced Analytics** - Detailed usage insights
+- **API Versioning** - Support for API versioning
+- **Webhook Integration** - Real-time notifications
+- **Mobile SDKs** - iOS and Android SDKs
+- **White-label Solution** - Customizable platform
+- **Advanced Pricing** - Tiered pricing models
+- **Subscription Plans** - Monthly/yearly subscriptions
+
+### **Integration Roadmap:**
+- **More Payment Methods** - Additional payout options
+- **Advanced Security** - 2FA, hardware security modules
+- **Compliance** - KYC/AML integration
+- **International** - Multi-language support
+- **Enterprise** - Custom enterprise solutions
+
+---
+
+## 📞 **Support & Documentation**
+
+### **Developer Resources:**
+- **API Documentation** - Comprehensive API reference
+- **SDK Libraries** - JavaScript, Python, Go SDKs
+- **Code Examples** - Sample implementations
+- **Tutorials** - Step-by-step guides
+
+### **Supplier Resources:**
+- **Onboarding Guide** - Getting started guide
+- **Best Practices** - API monetization tips
+- **Analytics Guide** - Understanding your metrics
+- **Support Portal** - Help and troubleshooting
+
+### **Contact Information:**
+- **Email**: support@bsvapi.com
+- **Documentation**: docs.bsvapi.com
+- **Status Page**: status.bsvapi.com
+- **Community**: community.bsvapi.com
+
+---
+
+## 🎉 **Getting Started**
+
+### **For Developers:**
+1. Register at bsvapi.com
+2. Create API key
+3. Add BSV to balance
+4. Browse and use APIs
+5. Monitor usage and costs
+
+### **For Suppliers:**
+1. Register as supplier
+2. Configure API service
+3. Set up payment method
+4. Start earning from API calls
+5. Receive regular payouts
+
+---
+
+*This platform bridges the gap between cryptocurrency micropayments and traditional business payments, enabling seamless API monetization for businesses while providing developers with easy access to paid APIs.* 

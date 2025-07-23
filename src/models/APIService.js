@@ -1,24 +1,7 @@
 const mongoose = require('mongoose');
 
 const apiServiceSchema = new mongoose.Schema({
-  // Supplier (Business) Information
-  supplierId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  supplierName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  supplierEmail: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  
-  // API Service Details
+  // Basic service information
   name: {
     type: String,
     required: true,
@@ -26,127 +9,173 @@ const apiServiceSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   category: {
     type: String,
     required: true,
-    enum: ['data', 'ai', 'payment', 'communication', 'analytics', 'other']
+    enum: ['data', 'ai', 'finance', 'social', 'utilities', 'other']
   },
-  
-  // Pricing Configuration
-  pricing: {
-    type: {
-      type: String,
-      enum: ['per_call', 'per_minute', 'per_mb', 'subscription'],
+  tags: [{
+    type: String,
+    trim: true
+  }],
+
+  // Supplier information
+  supplier: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true
     },
-    amount: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    currency: {
+    name: {
       type: String,
-      enum: ['satoshis', 'usd_cents'],
-      default: 'satoshis'
+      required: true
     },
-    freeTier: {
-      calls: {
-        type: Number,
-        default: 0
-      },
-      amount: {
-        type: Number,
-        default: 0
-      }
-    }
+    email: {
+      type: String,
+      required: true
+    },
+    website: String,
+    logo: String
   },
-  
-  // API Configuration
-  endpoint: {
-    url: {
+
+  // API configuration
+  apiConfig: {
+    baseUrl: {
       type: String,
-      required: true,
-      trim: true
+      required: true
     },
-    method: {
-      type: String,
-      enum: ['GET', 'POST', 'PUT', 'DELETE'],
-      default: 'GET'
-    },
-    headers: {
-      type: Map,
-      of: String,
-      default: {}
+    endpoints: [{
+      path: {
+        type: String,
+        required: true
+      },
+      method: {
+        type: String,
+        enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        default: 'GET'
+      },
+      description: String,
+      parameters: [{
+        name: String,
+        type: String,
+        required: Boolean,
+        description: String
+      }],
+      headers: [{
+        name: String,
+        value: String,
+        description: String
+      }],
+      authentication: {
+        type: {
+          type: String,
+          enum: ['none', 'api_key', 'bearer', 'basic', 'oauth2'],
+          default: 'none'
+        },
+        key: String,
+        value: String,
+        header: String
+      }
+    }],
+    rateLimit: {
+      requestsPerMinute: {
+        type: Number,
+        default: 60
+      },
+      requestsPerHour: {
+        type: Number,
+        default: 1000
+      }
     },
     timeout: {
       type: Number,
       default: 30000 // 30 seconds
+    },
+    retries: {
+      type: Number,
+      default: 3
     }
   },
-  
-  // Authentication
-  auth: {
-    type: {
+
+  // Pricing configuration
+  pricing: {
+    model: {
       type: String,
-      enum: ['none', 'api_key', 'bearer', 'basic', 'oauth2'],
-      default: 'none'
+      enum: ['per_call', 'per_request', 'tiered', 'subscription'],
+      default: 'per_call'
     },
-    apiKey: {
-      type: String,
-      trim: true
-    },
-    bearerToken: {
-      type: String,
-      trim: true
-    },
-    username: {
-      type: String,
-      trim: true
-    },
-    password: {
-      type: String,
-      trim: true
-    }
-  },
-  
-  // Supplier Payment Configuration
-  paymentConfig: {
-    stablecoinAddress: {
-      type: String,
+    pricePerCall: {
+      type: Number,
       required: true,
-      trim: true
+      min: 0.001 // Minimum $0.001 per call
     },
-    stablecoinType: {
+    currency: {
       type: String,
-      enum: ['USDC', 'USDT', 'DAI'],
-      default: 'USDC'
+      default: 'USD'
     },
+    tiers: [{
+      name: String,
+      minCalls: Number,
+      maxCalls: Number,
+      pricePerCall: Number
+    }],
+    subscriptionPlans: [{
+      name: String,
+      price: Number,
+      callsPerMonth: Number,
+      features: [String]
+    }]
+  },
+
+  // Payment configuration for supplier payouts
+  paymentConfig: {
+    paymentMethod: {
+      type: String,
+      enum: ['stripe', 'paypal', 'bank_transfer'],
+      required: true
+    },
+    preferredCurrency: {
+      type: String,
+      default: 'USD',
+      enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK']
+    },
+    // Stripe configuration
+    stripeAccountId: String,
+    stripePayoutSchedule: {
+      type: String,
+      enum: ['manual', 'daily', 'weekly', 'monthly'],
+      default: 'weekly'
+    },
+    // PayPal configuration
+    paypalEmail: String,
+    paypalPayoutSchedule: {
+      type: String,
+      enum: ['manual', 'daily', 'weekly', 'monthly'],
+      default: 'weekly'
+    },
+    // Bank transfer configuration
+    bankDetails: {
+      accountName: String,
+      accountNumber: String,
+      routingNumber: String,
+      bankName: String,
+      swiftCode: String,
+      iban: String
+    },
+    // Payout thresholds
     minimumPayout: {
       type: Number,
-      default: 1000 // $10.00 in cents
-    },
-    payoutSchedule: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly'],
-      default: 'weekly'
+      default: 50.00 // $50 minimum payout
     },
     autoPayout: {
       type: Boolean,
       default: true
     }
   },
-  
-  // Service Status
-  status: {
-    type: String,
-    enum: ['draft', 'active', 'paused', 'suspended'],
-    default: 'draft'
-  },
-  
-  // Usage Statistics
+
+  // Usage statistics
   stats: {
     totalCalls: {
       type: Number,
@@ -160,117 +189,117 @@ const apiServiceSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    lastCall: {
-      type: Date
+    averageResponseTime: {
+      type: Number,
+      default: 0
     },
-    lastPayout: {
-      type: Date
-    }
+    successRate: {
+      type: Number,
+      default: 100
+    },
+    lastCallAt: Date,
+    lastPayoutAt: Date
   },
-  
-  // Rate Limiting
-  rateLimit: {
-    requestsPerMinute: {
-      type: Number,
-      default: 60
-    },
-    requestsPerHour: {
-      type: Number,
-      default: 1000
-    },
-    requestsPerDay: {
-      type: Number,
-      default: 10000
-    }
+
+  // Service status
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended', 'maintenance'],
+    default: 'active'
   },
-  
+
   // Documentation
   documentation: {
-    description: String,
-    parameters: [{
-      name: String,
-      type: String,
-      required: Boolean,
-      description: String
-    }],
+    overview: String,
+    quickStart: String,
     examples: [{
       title: String,
       description: String,
-      request: String,
-      response: String
+      code: String,
+      language: String
     }],
-    webhookUrl: String
+    apiReference: String,
+    supportEmail: String,
+    supportUrl: String
   },
-  
+
   // Metadata
-  tags: [String],
-  version: {
-    type: String,
-    default: '1.0.0'
-  },
-  isPublic: {
-    type: Boolean,
-    default: true
-  },
-  
-  // Audit Fields
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
-  approvedAt: Date,
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  metadata: {
+    featured: {
+      type: Boolean,
+      default: false
+    },
+    verified: {
+      type: Boolean,
+      default: false
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0
+    },
+    reviewCount: {
+      type: Number,
+      default: 0
+    }
   }
 }, {
   timestamps: true
 });
 
-// Indexes for performance
-apiServiceSchema.index({ supplierId: 1, status: 1 });
-apiServiceSchema.index({ category: 1, status: 1 });
-apiServiceSchema.index({ 'pricing.amount': 1 });
-apiServiceSchema.index({ tags: 1 });
+// Indexes for efficient querying
+apiServiceSchema.index({ 'supplier.id': 1 });
+apiServiceSchema.index({ category: 1 });
+apiServiceSchema.index({ status: 1 });
+apiServiceSchema.index({ 'metadata.featured': 1 });
+apiServiceSchema.index({ 'stats.totalCalls': -1 });
+apiServiceSchema.index({ 'pricing.pricePerCall': 1 });
 
-// Virtual for formatted pricing
-apiServiceSchema.virtual('formattedPricing').get(function() {
-  const { pricing } = this;
-  if (pricing.currency === 'satoshis') {
-    return `${pricing.amount} satoshis per ${pricing.type.replace('_', ' ')}`;
-  } else {
-    return `$${(pricing.amount / 100).toFixed(2)} per ${pricing.type.replace('_', ' ')}`;
-  }
+// Virtual for current balance (revenue - payouts)
+apiServiceSchema.virtual('currentBalance').get(function() {
+  return this.stats.totalRevenue - this.stats.totalPayouts;
 });
 
-// Virtual for revenue in USD
-apiServiceSchema.virtual('revenueUSD').get(function() {
-  return this.stats.totalRevenue / 100; // Convert cents to dollars
+// Virtual for payout eligibility
+apiServiceSchema.virtual('isEligibleForPayout').get(function() {
+  return this.currentBalance >= this.paymentConfig.minimumPayout;
 });
 
 // Methods
-apiServiceSchema.methods.incrementUsage = function(amount = 0) {
+apiServiceSchema.methods.incrementUsage = async function(callCost = 0) {
   this.stats.totalCalls += 1;
-  if (amount > 0) {
-    this.stats.totalRevenue += amount;
-  }
-  this.stats.lastCall = new Date();
-  return this.save();
+  this.stats.totalRevenue += callCost;
+  this.stats.lastCallAt = new Date();
+  await this.save();
 };
 
-apiServiceSchema.methods.processPayout = function(amount) {
+apiServiceSchema.methods.processPayout = async function(amount) {
   this.stats.totalPayouts += amount;
-  this.stats.lastPayout = new Date();
-  return this.save();
+  this.stats.lastPayoutAt = new Date();
+  await this.save();
 };
 
-apiServiceSchema.methods.isEligibleForPayout = function() {
-  const pendingAmount = this.stats.totalRevenue - this.stats.totalPayouts;
-  return pendingAmount >= this.paymentConfig.minimumPayout;
+apiServiceSchema.methods.updateResponseTime = async function(responseTime) {
+  // Update average response time
+  const totalCalls = this.stats.totalCalls;
+  const currentAvg = this.stats.averageResponseTime;
+  
+  this.stats.averageResponseTime = ((currentAvg * (totalCalls - 1)) + responseTime) / totalCalls;
+  await this.save();
+};
+
+apiServiceSchema.methods.updateSuccessRate = async function(success) {
+  const totalCalls = this.stats.totalCalls;
+  const currentSuccessRate = this.stats.successRate;
+  
+  if (success) {
+    this.stats.successRate = ((currentSuccessRate * (totalCalls - 1)) + 100) / totalCalls;
+  } else {
+    this.stats.successRate = (currentSuccessRate * (totalCalls - 1)) / totalCalls;
+  }
+  
+  await this.save();
 };
 
 // Static methods
@@ -278,18 +307,19 @@ apiServiceSchema.statics.findByCategory = function(category) {
   return this.find({ category, status: 'active' });
 };
 
+apiServiceSchema.statics.findFeatured = function() {
+  return this.find({ 'metadata.featured': true, status: 'active' });
+};
+
 apiServiceSchema.statics.findBySupplier = function(supplierId) {
-  return this.find({ supplierId });
+  return this.find({ 'supplier.id': supplierId });
 };
 
-apiServiceSchema.statics.findPublic = function() {
-  return this.find({ status: 'active', isPublic: true });
+apiServiceSchema.statics.findEligibleForPayout = function() {
+  return this.find({
+    status: 'active',
+    'paymentConfig.autoPayout': true
+  });
 };
-
-// Pre-save middleware
-apiServiceSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
 
 module.exports = mongoose.model('APIService', apiServiceSchema); 

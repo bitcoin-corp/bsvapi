@@ -1,93 +1,79 @@
-# 🚀 Developer Quick Start Guide - BSVAPI.com
+# 🚀 BSV API Platform - Developer Quick Start Guide
 
-## 🎯 **What You Can Do**
+Welcome to BSV API Platform! This guide will help you get started with using APIs that accept BitcoinSV micropayments.
 
-As a developer, you can:
-- **Browse APIs** in the marketplace
-- **Make API calls** with automatic BSV micropayments
-- **Manage your balance** and payment history
-- **Get API keys** for programmatic access
+## 🎯 **What is BSV API Platform?**
+
+BSV API Platform is a marketplace where you can access paid APIs using BitcoinSV micropayments. The platform:
+
+- **Converts BSV to stablecoins** immediately upon payment
+- **Pays suppliers** via traditional methods (Stripe, PayPal, bank transfer)
+- **Handles all the complexity** of micropayments and currency conversion
+- **Provides a unified interface** for accessing multiple APIs
+
+---
 
 ## 📋 **Prerequisites**
 
-1. **BSV Wallet**: You need a BitcoinSV wallet with some BSV
-2. **Account**: Register on BSVAPI.com
-3. **API Key**: Create an API key for programmatic access
+- **BitcoinSV wallet** with some BSV for payments
+- **Basic understanding** of REST APIs
+- **JavaScript knowledge** (for SDK examples)
 
-## 🔧 **Step-by-Step Setup**
+---
 
-### 1. **Register Account**
+## 🚀 **Quick Start (5 Minutes)**
+
+### **Step 1: Register as a Developer**
+
 ```bash
-curl -X POST https://api.bsvapi.com/v1/auth/register \
+curl -X POST https://bsvapi.com/api/developer/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "your@email.com",
-    "password": "securepassword",
-    "username": "yourusername"
+    "email": "your-email@example.com",
+    "password": "secure-password",
+    "name": "Your Name"
   }'
 ```
 
-### 2. **Login & Get JWT Token**
-```bash
-curl -X POST https://api.bsvapi.com/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "your@email.com",
-    "password": "securepassword"
-  }'
-```
+### **Step 2: Create an API Key**
 
-### 3. **Create API Key**
 ```bash
-curl -X POST https://api.bsvapi.com/v1/developer/keys \
+curl -X POST https://bsvapi.com/api/developer/keys \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My App API Key",
-    "description": "For production application"
+    "name": "My API Key",
+    "permissions": ["read", "write"]
   }'
 ```
 
-### 4. **Add BSV Balance**
+### **Step 3: Add BSV to Your Balance**
+
 ```bash
-curl -X POST https://api.bsvapi.com/v1/payments/create \
+curl -X POST https://bsvapi.com/api/developer/topup \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": 10000,
-    "description": "Add balance for API calls"
+    "amount": 0.001,
+    "paymentMethod": "bsv_wallet"
   }'
 ```
 
-## 🔍 **Browse Available APIs**
+### **Step 4: Browse Available APIs**
 
-### Get All APIs
 ```bash
-curl -X GET https://api.bsvapi.com/v1/apis/marketplace \
+curl -X GET https://bsvapi.com/api/apis/marketplace \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
-### Filter by Category
-```bash
-curl -X GET "https://api.bsvapi.com/v1/apis/marketplace?category=data&sort=popular" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
+### **Step 5: Make Your First API Call**
 
-### Search APIs
 ```bash
-curl -X GET "https://api.bsvapi.com/v1/apis/marketplace?search=weather&minPrice=50&maxPrice=200" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
-## 📞 **Make API Calls**
-
-### Simple GET Request
-```bash
-curl -X POST https://api.bsvapi.com/v1/apis/call \
+curl -X POST https://bsvapi.com/api/apis/call \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "serviceId": "api_service_id_here",
+    "serviceId": "weather-api-service-id",
     "endpoint": "/weather/current",
     "parameters": {
       "city": "London"
@@ -95,231 +81,449 @@ curl -X POST https://api.bsvapi.com/v1/apis/call \
   }'
 ```
 
-### Response Example
+---
+
+## 💰 **Understanding Payments**
+
+### **How Payments Work:**
+
+1. **You pay in BSV** - Each API call costs a small amount of BSV
+2. **Platform converts to USD** - BSV is immediately converted to stablecoins
+3. **Supplier gets paid** - Supplier receives payment via Stripe/PayPal/bank transfer
+4. **No exchange risk** - Suppliers get stable payments in their preferred currency
+
+### **Example Payment Flow:**
+
+```
+API Call Cost: 0.0001 BSV (~$0.10)
+Platform Fee: 10% ($0.01)
+Supplier Receives: $0.09 via Stripe/PayPal
+```
+
+### **Checking Your Balance:**
+
+```bash
+curl -X GET https://bsvapi.com/api/developer/balance \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+Response:
+```json
+{
+  "balance": 0.005,
+  "currency": "BSV",
+  "usdValue": 5.00,
+  "lastUpdated": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## 🔍 **Finding APIs**
+
+### **Browse by Category:**
+
+```bash
+# Get all data APIs
+curl "https://bsvapi.com/api/apis/marketplace?category=data"
+
+# Get all AI APIs
+curl "https://bsvapi.com/api/apis/marketplace?category=ai"
+
+# Get all finance APIs
+curl "https://bsvapi.com/api/apis/marketplace?category=finance"
+```
+
+### **Search and Filter:**
+
+```bash
+# Search by name
+curl "https://bsvapi.com/api/apis/marketplace?search=weather"
+
+# Sort by price (lowest first)
+curl "https://bsvapi.com/api/apis/marketplace?sort=price_asc"
+
+# Sort by popularity
+curl "https://bsvapi.com/api/apis/marketplace?sort=popular"
+
+# Filter by price range
+curl "https://bsvapi.com/api/apis/marketplace?minPrice=0.001&maxPrice=0.01"
+```
+
+### **Get API Details:**
+
+```bash
+curl -X GET https://bsvapi.com/api/apis/API_SERVICE_ID \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+Response:
+```json
+{
+  "id": "api-service-id",
+  "name": "Weather API",
+  "description": "Real-time weather data for any location",
+  "category": "data",
+  "supplier": {
+    "name": "WeatherCorp",
+    "verified": true
+  },
+  "pricing": {
+    "model": "per_call",
+    "pricePerCall": 0.0001,
+    "currency": "BSV"
+  },
+  "documentation": {
+    "overview": "Get current weather conditions...",
+    "endpoints": [
+      {
+        "path": "/weather/current",
+        "method": "GET",
+        "description": "Get current weather for a city"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 📞 **Making API Calls**
+
+### **Basic API Call:**
+
+```bash
+curl -X POST https://bsvapi.com/api/apis/call \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serviceId": "weather-api-service-id",
+    "endpoint": "/weather/current",
+    "parameters": {
+      "city": "London",
+      "units": "metric"
+    }
+  }'
+```
+
+### **API Call with Headers:**
+
+```bash
+curl -X POST https://bsvapi.com/api/apis/call \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serviceId": "api-service-id",
+    "endpoint": "/data/process",
+    "method": "POST",
+    "parameters": {
+      "data": "your-data-here"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    }
+  }'
+```
+
+### **Response Format:**
+
 ```json
 {
   "success": true,
   "data": {
-    "city": "London",
-    "temperature": 18,
-    "condition": "Cloudy",
+    "temperature": 22,
+    "condition": "sunny",
     "humidity": 65
   },
   "payment": {
-    "amount": 100,
-    "currency": "satoshis",
-    "status": "confirmed"
+    "amount": 0.0001,
+    "currency": "BSV",
+    "usdValue": 0.10,
+    "transactionId": "tx_123456789"
   },
-  "metadata": {
-    "serviceId": "api_service_id",
-    "serviceName": "Weather API",
-    "endpoint": "/weather/current",
-    "timestamp": "2024-01-15T10:30:00Z"
+  "usage": {
+    "remainingBalance": 0.0049,
+    "callsThisMonth": 15
   }
 }
 ```
 
-## 💰 **Handle Insufficient Balance**
+---
 
-If you don't have enough BSV balance, you'll get a 402 response:
+## ⚠️ **Handling Insufficient Balance**
+
+### **Check Balance Before Call:**
+
+```bash
+curl -X GET https://bsvapi.com/api/developer/balance \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+### **Add More BSV:**
+
+```bash
+curl -X POST https://bsvapi.com/api/developer/topup \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 0.01,
+    "paymentMethod": "bsv_wallet"
+  }'
+```
+
+### **Error Response (Insufficient Balance):**
 
 ```json
 {
-  "error": "Insufficient balance",
-  "message": "Payment required to access this API",
-  "data": {
-    "paymentRequest": {
-      "paymentId": "pay_1234567890_abc123",
-      "paymentAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-      "amount": 100,
-      "totalAmount": 1100,
-      "fees": {
-        "minerFee": 1000,
-        "serviceFee": 0,
-        "totalFees": 1000
-      },
-      "status": "pending",
-      "expiresAt": "2024-01-15T11:30:00Z"
-    }
-  }
+  "success": false,
+  "error": "insufficient_balance",
+  "message": "Insufficient BSV balance for this API call",
+  "required": 0.0001,
+  "available": 0.00005,
+  "topupUrl": "https://bsvapi.com/developer/topup"
 }
 ```
 
-### Complete the Payment
-1. **Send BSV** to the provided payment address
-2. **Wait for confirmation** (usually 1-2 minutes)
-3. **Retry your API call**
+---
 
-## 📊 **Check Your Usage**
+## 📊 **Usage Tracking**
 
-### Get API Key Stats
+### **Get Usage Statistics:**
+
 ```bash
-curl -X GET https://api.bsvapi.com/v1/developer/keys/YOUR_API_KEY/stats \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET https://bsvapi.com/api/developer/usage \
+  -H "X-API-Key: YOUR_API_KEY"
 ```
 
-### Get Payment History
-```bash
-curl -X GET https://api.bsvapi.com/v1/payments \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+Response:
+```json
+{
+  "totalCalls": 150,
+  "totalSpent": 0.015,
+  "totalSpentUSD": 15.00,
+  "thisMonth": {
+    "calls": 45,
+    "spent": 0.0045,
+    "spentUSD": 4.50
+  },
+  "topApis": [
+    {
+      "serviceId": "weather-api",
+      "name": "Weather API",
+      "calls": 30,
+      "spent": 0.003
+    }
+  ]
+}
 ```
 
-### Check Balance
+### **Get Payment History:**
+
 ```bash
-curl -X GET https://api.bsvapi.com/v1/users/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET https://bsvapi.com/api/developer/payments \
+  -H "X-API-Key: YOUR_API_KEY"
 ```
+
+---
 
 ## 🔧 **SDK Examples**
 
-### JavaScript/Node.js
+### **JavaScript SDK:**
+
 ```javascript
 import { BSVAPI } from '@bsvapi/sdk';
 
 const api = new BSVAPI({
-  apiKey: 'your_api_key_here',
-  environment: 'production'
+  apiKey: 'your-api-key'
 });
 
-// Browse APIs
-const apis = await api.marketplace.listAPIs({
-  category: 'data',
-  sort: 'popular'
+// Make an API call
+const response = await api.call({
+  serviceId: 'weather-api-service-id',
+  endpoint: '/weather/current',
+  parameters: {
+    city: 'London'
+  }
 });
 
-// Make API call
-const result = await api.marketplace.callAPI({
-  serviceId: 'weather_api_id',
-  endpoint: '/current',
-  parameters: { city: 'London' }
-});
-
-console.log(result.data); // API response
-console.log(result.payment.amount); // Amount paid
+console.log(response.data);
+console.log(`Paid: ${response.payment.amount} BSV`);
 ```
 
-### Python
+### **Python SDK:**
+
 ```python
 from bsvapi import BSVAPI
 
-api = BSVAPI(api_key='your_api_key_here')
+api = BSVAPI(api_key='your-api-key')
 
-# Browse APIs
-apis = api.marketplace.list_apis(category='data', sort='popular')
-
-# Make API call
-result = api.marketplace.call_api(
-    service_id='weather_api_id',
-    endpoint='/current',
+# Make an API call
+response = api.call(
+    service_id='weather-api-service-id',
+    endpoint='/weather/current',
     parameters={'city': 'London'}
 )
 
-print(result.data)  # API response
-print(result.payment.amount)  # Amount paid
+print(response.data)
+print(f"Paid: {response.payment.amount} BSV")
 ```
 
-### cURL Examples
-```bash
-# Get weather data
-curl -X POST https://api.bsvapi.com/v1/apis/call \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"serviceId":"weather_id","endpoint":"/current","parameters":{"city":"Tokyo"}}'
+### **Go SDK:**
 
-# Get crypto prices
-curl -X POST https://api.bsvapi.com/v1/apis/call \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"serviceId":"crypto_id","endpoint":"/price","parameters":{"symbol":"BTC"}}'
+```go
+package main
 
-# Translate text
-curl -X POST https://api.bsvapi.com/v1/apis/call \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"serviceId":"translate_id","endpoint":"/translate","parameters":{"text":"Hello","target":"es"}}'
-```
+import (
+    "github.com/bsvapi/go-sdk"
+)
 
-## 🔐 **Security Best Practices**
-
-### 1. **Secure API Keys**
-- Never commit API keys to version control
-- Use environment variables
-- Rotate keys regularly
-- Set IP whitelists for production keys
-
-### 2. **Error Handling**
-```javascript
-try {
-  const result = await api.marketplace.callAPI({
-    serviceId: 'api_id',
-    endpoint: '/data',
-    parameters: { param: 'value' }
-  });
-} catch (error) {
-  if (error.response?.status === 402) {
-    // Handle insufficient balance
-    const paymentRequest = error.response.data.data.paymentRequest;
-    console.log('Payment required:', paymentRequest);
-  } else {
-    console.error('API call failed:', error.message);
-  }
+func main() {
+    api := bsvapi.New("your-api-key")
+    
+    response, err := api.Call(bsvapi.CallRequest{
+        ServiceID:  "weather-api-service-id",
+        Endpoint:   "/weather/current",
+        Parameters: map[string]interface{}{"city": "London"},
+    })
+    
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Printf("Temperature: %v\n", response.Data["temperature"])
+    fmt.Printf("Paid: %v BSV\n", response.Payment.Amount)
 }
 ```
 
-### 3. **Rate Limiting**
-- Respect rate limits (60 requests/minute by default)
-- Implement exponential backoff for retries
-- Monitor your usage
+---
 
-## 📈 **Pricing Examples**
+## 🔐 **Security Best Practices**
 
-### Common API Costs
-- **Weather Data**: 50-100 satoshis per call
-- **Translation**: 25-75 satoshis per call
-- **Crypto Prices**: 10-50 satoshis per call
-- **AI Services**: 100-500 satoshis per call
+### **API Key Security:**
 
-### Cost Calculation
+1. **Keep your API key secret** - Never expose it in client-side code
+2. **Use environment variables** - Store keys in `.env` files
+3. **Rotate keys regularly** - Create new keys and delete old ones
+4. **Monitor usage** - Check for unexpected API calls
+
+### **Example Environment Setup:**
+
+```bash
+# .env file
+BSVAPI_API_KEY=your-api-key-here
+BSVAPI_BASE_URL=https://bsvapi.com
 ```
-1 BSV = 100,000,000 satoshis
-1 satoshi ≈ $0.00001 (varies with BSV price)
 
-Example: 100 satoshis ≈ $0.001 per API call
+### **Secure API Key Usage:**
+
+```javascript
+// ✅ Good - Use environment variables
+const apiKey = process.env.BSVAPI_API_KEY;
+
+// ❌ Bad - Hardcoded in code
+const apiKey = 'your-api-key-here';
 ```
+
+---
+
+## 💡 **Pricing & Costs**
+
+### **Typical API Costs:**
+
+- **Data APIs**: 0.0001 - 0.001 BSV per call (~$0.10 - $1.00)
+- **AI APIs**: 0.001 - 0.01 BSV per call (~$1.00 - $10.00)
+- **Finance APIs**: 0.0005 - 0.005 BSV per call (~$0.50 - $5.00)
+
+### **Platform Fee:**
+
+- **10% platform fee** on all API calls
+- **90% goes to suppliers** via traditional payments
+- **No hidden fees** - all costs are transparent
+
+### **Cost Optimization:**
+
+1. **Batch requests** when possible
+2. **Use caching** to avoid repeated calls
+3. **Monitor usage** to identify expensive APIs
+4. **Consider subscriptions** for high-volume usage
+
+---
 
 ## 🆘 **Troubleshooting**
 
-### Common Issues
+### **Common Issues:**
 
-#### 1. **401 Unauthorized**
-- Check your API key is correct
-- Verify the API key is active
-- Ensure you're using the right header (`X-API-Key`)
+#### **1. Insufficient Balance**
+```json
+{
+  "error": "insufficient_balance",
+  "solution": "Add more BSV to your account"
+}
+```
 
-#### 2. **402 Payment Required**
-- Add more BSV to your balance
-- Check the payment address and amount
-- Wait for transaction confirmation
+#### **2. Invalid API Key**
+```json
+{
+  "error": "invalid_api_key",
+  "solution": "Check your API key or create a new one"
+}
+```
 
-#### 3. **429 Too Many Requests**
-- Reduce your request frequency
-- Implement rate limiting in your code
-- Check your current usage limits
+#### **3. Rate Limited**
+```json
+{
+  "error": "rate_limit_exceeded",
+  "solution": "Wait before making more requests"
+}
+```
 
-#### 4. **500 Internal Server Error**
-- Retry the request
-- Check the API service status
-- Contact support if persistent
+#### **4. API Service Unavailable**
+```json
+{
+  "error": "service_unavailable",
+  "solution": "Try again later or contact support"
+}
+```
 
-### Support Resources
+### **Getting Help:**
+
 - **Documentation**: https://docs.bsvapi.com
-- **API Status**: https://status.bsvapi.com
-- **Support**: support@bsvapi.com
-- **Discord**: https://discord.gg/bsvapi
+- **Support Email**: support@bsvapi.com
+- **Community**: https://community.bsvapi.com
+- **Status Page**: https://status.bsvapi.com
 
-## 🎉 **You're Ready!**
+---
 
-You now have everything you need to:
-- ✅ Browse and discover APIs
-- ✅ Make micropayments for API access
-- ✅ Handle payments and balance management
-- ✅ Use SDKs for easy integration
+## 🎉 **Next Steps**
 
-**Start building with BSV micropayments today!** 
+### **Explore the Marketplace:**
+1. Browse available APIs by category
+2. Read API documentation
+3. Test APIs with small amounts
+4. Integrate into your applications
+
+### **Advanced Features:**
+1. **Webhooks** - Get notified of payment events
+2. **Bulk Operations** - Process multiple API calls
+3. **Analytics** - Track usage patterns
+4. **Team Management** - Share API keys with team
+
+### **Stay Updated:**
+- Follow our blog for new APIs
+- Join our developer community
+- Subscribe to our newsletter
+- Follow us on social media
+
+---
+
+## 📞 **Support**
+
+Need help? We're here to assist you:
+
+- **Email**: support@bsvapi.com
+- **Documentation**: https://docs.bsvapi.com
+- **Community**: https://community.bsvapi.com
+- **Status**: https://status.bsvapi.com
+
+**Happy coding with BSV micropayments! 🚀** 
