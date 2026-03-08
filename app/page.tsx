@@ -5,7 +5,7 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Nav */}
       <nav className="border-b border-zinc-200">
-        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
             <Image
               src="/images/bsvapi-logo.png"
@@ -30,7 +30,7 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-3xl mx-auto px-6 pt-20 pb-16">
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
         <p className="text-sm text-zinc-400 font-mono mb-6">
           HTTP 402 Payment Required
         </p>
@@ -60,7 +60,7 @@ export default function Home() {
       </section>
 
       {/* Banner */}
-      <section className="max-w-3xl mx-auto px-6 pb-20">
+      <section className="max-w-5xl mx-auto px-6 pb-20">
         <Image
           src="/images/BSVAPI_02.jpg"
           alt="BSV API"
@@ -73,7 +73,7 @@ export default function Home() {
 
       {/* Protocol */}
       <section id="protocol" className="border-t border-zinc-200">
-        <div className="max-w-3xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-20">
           <h2 className="text-2xl font-bold mb-3">Protocol</h2>
           <p className="text-zinc-500 mb-12 max-w-lg">
             BSVAPI uses HTTP 402 for payment negotiation. The flow is three
@@ -169,7 +169,7 @@ x-bsv-payment: a1b2c3d4e5f6...
 
       {/* Registered Clients */}
       <section className="border-t border-zinc-200 bg-zinc-50">
-        <div className="max-w-3xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-20">
           <h2 className="text-2xl font-bold mb-3">For businesses</h2>
           <p className="text-zinc-500 mb-8 max-w-lg">
             Registered clients get an API key, metered usage, and volume
@@ -217,7 +217,7 @@ Content-Type: application/json
 
       {/* Pricing */}
       <section id="pricing" className="border-t border-zinc-200">
-        <div className="max-w-3xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-20">
           <h2 className="text-2xl font-bold mb-3">Pricing</h2>
           <p className="text-zinc-500 mb-8">
             2x upstream cost. Paid in BSV at the current exchange rate.
@@ -259,7 +259,7 @@ Content-Type: application/json
 
       {/* API Reference */}
       <section id="reference" className="border-t border-zinc-200 bg-zinc-50">
-        <div className="max-w-3xl mx-auto px-6 py-20">
+        <div className="max-w-5xl mx-auto px-6 py-20">
           <h2 className="text-2xl font-bold mb-8">Reference</h2>
 
           <div className="space-y-8">
@@ -328,7 +328,7 @@ curl -X POST https://bsvapi.com/api/v1/chat/completions \\
 
       {/* Footer */}
       <footer className="border-t border-zinc-200 py-8">
-        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between text-xs text-zinc-400">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-xs text-zinc-400">
           <span>
             A{" "}
             <a
