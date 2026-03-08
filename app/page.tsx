@@ -2,557 +2,344 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen">
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <nav className="border-b border-zinc-200">
+        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2">
             <Image
               src="/images/bsvapi-logo.png"
               alt="BSVAPI"
-              width={32}
-              height={32}
-              className="rounded-lg"
+              width={24}
+              height={24}
             />
-            <span className="font-bold text-lg tracking-tight">BSVAPI</span>
-          </div>
-          <div className="flex items-center gap-6 text-sm">
-            <a
-              href="#how-it-works"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              How It Works
+            <span className="font-semibold text-sm">BSVAPI</span>
+          </a>
+          <div className="flex items-center gap-5 text-sm text-zinc-500">
+            <a href="#protocol" className="hover:text-zinc-900">
+              Protocol
             </a>
-            <a
-              href="#pricing"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
+            <a href="#pricing" className="hover:text-zinc-900">
               Pricing
             </a>
-            <a
-              href="#docs"
-              className="text-zinc-400 hover:text-white transition-colors"
-            >
-              Docs
-            </a>
-            <a
-              href="/admin"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              Admin
+            <a href="#reference" className="hover:text-zinc-900">
+              Reference
             </a>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-16 overflow-hidden">
-        {/* Background video */}
-        <div className="absolute inset-0 z-0">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full h-full object-cover opacity-30"
+      <section className="max-w-3xl mx-auto px-6 pt-20 pb-16">
+        <p className="text-sm text-zinc-400 font-mono mb-6">
+          HTTP 402 Payment Required
+        </p>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.15] mb-6">
+          Pay for API calls
+          <br />
+          with Bitcoin SV
+        </h1>
+        <p className="text-lg text-zinc-500 max-w-lg mb-10 leading-relaxed">
+          No accounts. No subscriptions. Send a request, pay in satoshis, get
+          your response. OpenAI-compatible endpoints backed by Grok.
+        </p>
+        <div className="flex gap-3">
+          <a
+            href="#reference"
+            className="px-5 py-2.5 bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
           >
-            <source src="https://b0ase.com/images/clientprojects/bsvapi-com/BSV_API.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black" />
+            API Reference
+          </a>
+          <a
+            href="#protocol"
+            className="px-5 py-2.5 text-sm font-medium border border-zinc-300 hover:border-zinc-400"
+          >
+            How it works
+          </a>
         </div>
+      </section>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-32 md:py-44">
-          {/* Banner image */}
-          <div className="mb-10 max-w-2xl">
-            <Image
-              src="/images/BSVAPI_02.jpg"
-              alt="BSV API"
-              width={762}
-              height={229}
-              className="rounded-2xl border border-zinc-800/50 shadow-2xl shadow-orange-500/10"
-              priority
-            />
-          </div>
+      {/* Banner */}
+      <section className="max-w-3xl mx-auto px-6 pb-20">
+        <Image
+          src="/images/BSVAPI_02.jpg"
+          alt="BSV API"
+          width={762}
+          height={229}
+          className="w-full"
+          priority
+        />
+      </section>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
-            Money in.
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-500">
-              Content out.
-            </span>
-          </h1>
-
-          <p className="text-xl md:text-2xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
-            The API vending machine. Pay per call with BSV micropayments.
-            No accounts. No subscriptions. No API keys. Just HTTP.
+      {/* Protocol */}
+      <section id="protocol" className="border-t border-zinc-200">
+        <div className="max-w-3xl mx-auto px-6 py-20">
+          <h2 className="text-2xl font-bold mb-3">Protocol</h2>
+          <p className="text-zinc-500 mb-12 max-w-lg">
+            BSVAPI uses HTTP 402 for payment negotiation. The flow is three
+            requests, or two if you already know the price.
           </p>
 
-          <div className="flex flex-wrap gap-4">
-            <a
-              href="#docs"
-              className="group px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-black font-bold rounded-xl hover:from-orange-400 hover:to-yellow-400 transition-all shadow-lg shadow-orange-500/25"
-            >
-              Start Building
-              <span className="ml-2 group-hover:ml-3 transition-all">→</span>
-            </a>
-            <a
-              href="#how-it-works"
-              className="px-8 py-4 border border-zinc-700 rounded-xl hover:border-orange-500/50 hover:bg-orange-500/5 transition-all"
-            >
-              Learn More
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Bar */}
-      <section className="border-y border-zinc-800 bg-zinc-950">
-        <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div>
-            <div className="text-3xl font-bold text-orange-400">402</div>
-            <div className="text-sm text-zinc-500 mt-1">
-              HTTP Payment Required
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">0</div>
-            <div className="text-sm text-zinc-500 mt-1">
-              Accounts needed
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">2×</div>
-            <div className="text-sm text-zinc-500 mt-1">
-              Simple markup pricing
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-orange-400">BSV</div>
-            <div className="text-sm text-zinc-500 mt-1">
-              Micropayments only
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold mb-4">How It Works</h2>
-          <p className="text-zinc-400 mb-16 max-w-xl">
-            Like a vending machine. You don&apos;t create an account at a vending
-            machine. You put money in and product comes out.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative group">
-              <div className="absolute -inset-px bg-gradient-to-b from-orange-500/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative border border-zinc-800 rounded-2xl p-8 h-full bg-zinc-950">
-                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl font-bold text-orange-400">1</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Send Your Request</h3>
-                <p className="text-zinc-400 leading-relaxed">
-                  POST to our API. Same OpenAI-compatible format you already
-                  know. Any model, any prompt.
+          <div className="space-y-10">
+            {/* Step 1 */}
+            <div className="grid md:grid-cols-[140px_1fr] gap-4">
+              <div>
+                <p className="text-sm font-mono text-zinc-400">Step 1</p>
+                <p className="text-sm font-medium mt-1">Request</p>
+              </div>
+              <div>
+                <p className="text-sm text-zinc-600 mb-3">
+                  Send your request without payment. The server responds with
+                  402 and the price in satoshis.
                 </p>
-                <div className="mt-6 bg-black rounded-xl p-4 font-mono text-xs text-zinc-400">
-                  <span className="text-orange-400">POST</span>{" "}
-                  /api/v1/chat/completions
-                </div>
+                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
+{`POST /api/v1/chat/completions
+Content-Type: application/json
+
+{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}
+
+← 402 Payment Required
+← x-bsv-payment-satoshis-required: 500`}
+                </pre>
               </div>
             </div>
 
-            <div className="relative group">
-              <div className="absolute -inset-px bg-gradient-to-b from-orange-500/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative border border-zinc-800 rounded-2xl p-8 h-full bg-zinc-950">
-                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl font-bold text-orange-400">2</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Get The Price</h3>
-                <p className="text-zinc-400 leading-relaxed">
-                  We respond with HTTP 402 and the exact cost in satoshis. Your
-                  client pays the BSV transaction automatically.
+            {/* Step 2 */}
+            <div className="grid md:grid-cols-[140px_1fr] gap-4">
+              <div>
+                <p className="text-sm font-mono text-zinc-400">Step 2</p>
+                <p className="text-sm font-medium mt-1">Pay</p>
+              </div>
+              <div>
+                <p className="text-sm text-zinc-600 mb-3">
+                  Create a BSV transaction for the required amount. Include the
+                  txid in the{" "}
+                  <code className="text-zinc-900 bg-zinc-100 px-1">
+                    x-bsv-payment
+                  </code>{" "}
+                  header.
                 </p>
-                <div className="mt-6 bg-black rounded-xl p-4 font-mono text-xs text-zinc-400">
-                  <span className="text-yellow-400">402</span> Payment Required
-                  <br />
-                  <span className="text-zinc-600">x-bsv-payment-satoshis:</span>{" "}
-                  <span className="text-orange-400">5000</span>
-                </div>
+                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
+{`POST /api/v1/chat/completions
+Content-Type: application/json
+x-bsv-payment: a1b2c3d4e5f6...
+
+{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}`}
+                </pre>
               </div>
             </div>
 
-            <div className="relative group">
-              <div className="absolute -inset-px bg-gradient-to-b from-orange-500/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative border border-zinc-800 rounded-2xl p-8 h-full bg-zinc-950">
-                <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl font-bold text-orange-400">3</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Get Your Content</h3>
-                <p className="text-zinc-400 leading-relaxed">
-                  Payment verified on-chain. Request proxied to the AI model.
-                  Response returned. Done. No strings attached.
+            {/* Step 3 */}
+            <div className="grid md:grid-cols-[140px_1fr] gap-4">
+              <div>
+                <p className="text-sm font-mono text-zinc-400">Step 3</p>
+                <p className="text-sm font-medium mt-1">Receive</p>
+              </div>
+              <div>
+                <p className="text-sm text-zinc-600 mb-3">
+                  Payment is verified on-chain. The request is proxied upstream.
+                  You get the response with a payment receipt.
                 </p>
-                <div className="mt-6 bg-black rounded-xl p-4 font-mono text-xs text-zinc-400">
-                  <span className="text-green-400">200</span> OK
-                  <br />
-                  <span className="text-zinc-600">{`{`}</span>{" "}
-                  <span className="text-orange-400">&quot;choices&quot;</span>: [...]
-                  <span className="text-zinc-600">{` }`}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
+{`← 200 OK
 
-      {/* The Vending Machine */}
-      <section className="py-24 border-t border-zinc-800 bg-zinc-950">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="text-sm font-semibold text-orange-400 uppercase tracking-wider mb-4">
-                The $402 Philosophy
-              </div>
-              <h2 className="text-4xl font-bold mb-6 leading-tight">
-                We build vending machines.
-              </h2>
-              <p className="text-lg text-zinc-400 leading-relaxed mb-6">
-                The HTTP 402 status code — &quot;Payment Required&quot; — has been
-                reserved since 1997 but never used. Until now.
-              </p>
-              <p className="text-lg text-zinc-400 leading-relaxed mb-6">
-                BSVAPI is a vending machine for AI. Put BSV in, get intelligence
-                out. No relationship needed. No contract. No subscription. No
-                identity. The transaction is the only thing that matters.
-              </p>
-              <p className="text-zinc-500 leading-relaxed">
-                Built on{" "}
-                <span className="text-zinc-300">BRC-0105</span> — the BSV
-                standard for HTTP service monetization. Compatible with{" "}
-                <span className="text-zinc-300">PacketPay</span> clients for
-                automatic payment handling.
-              </p>
-            </div>
-            <div className="border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                <span className="text-xs text-zinc-500 ml-2 font-mono">
-                  terminal
-                </span>
-              </div>
-              <pre className="p-6 text-sm font-mono text-zinc-400 overflow-x-auto leading-relaxed">
-                <code>
-{`$ curl -X POST bsvapi.com/api/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -d '{"model":"grok-3-mini","messages":[
-    {"role":"user","content":"What is BSV?"}
-  ]}'
-
-`}<span className="text-yellow-400">{`< HTTP/1.1 402 Payment Required`}</span>{`
-`}<span className="text-zinc-600">{`< x-bsv-payment-satoshis-required: 500`}</span>{`
-
-`}<span className="text-zinc-500"># Pay 500 sats, retry with txid</span>{`
-
-$ curl -X POST bsvapi.com/api/v1/chat/completions \\
-  -H "x-bsv-payment: abc123...def" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model":"grok-3-mini","messages":[
-    {"role":"user","content":"What is BSV?"}
-  ]}'
-
-`}<span className="text-green-400">{`< HTTP/1.1 200 OK`}</span>{`
-`}<span className="text-orange-400">{`{
+{
   "choices": [{
-    "message": {
-      "content": "Bitcoin SV (BSV) is..."
-    }
+    "message": {"role":"assistant","content":"Hello! How can I..."}
   }],
-  "payment": {
-    "txid": "abc123...def",
-    "satoshisPaid": 500
-  }
-}`}</span>
-                </code>
-              </pre>
+  "usage": {"prompt_tokens":12,"completion_tokens":84},
+  "payment": {"txid":"a1b2c3...","satoshisPaid":500}
+}`}
+                </pre>
+              </div>
             </div>
           </div>
+
+          <div className="mt-12 border-l-2 border-zinc-200 pl-4">
+            <p className="text-sm text-zinc-500">
+              Implements{" "}
+              <span className="text-zinc-700">BRC-0105</span> HTTP Service
+              Monetization. Compatible with{" "}
+              <span className="text-zinc-700">PacketPay</span> clients for
+              automatic payment handling.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Registered Clients */}
+      <section className="border-t border-zinc-200 bg-zinc-50">
+        <div className="max-w-3xl mx-auto px-6 py-20">
+          <h2 className="text-2xl font-bold mb-3">For businesses</h2>
+          <p className="text-zinc-500 mb-8 max-w-lg">
+            Registered clients get an API key, metered usage, and volume
+            discounts. Calls are invoiced monthly in BSV.
+          </p>
+
+          <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto mb-8">
+{`POST /api/v1/chat/completions
+Authorization: Bearer bsvapi_sk_yourcompany_xxx
+Content-Type: application/json
+
+{"model":"grok-3","messages":[{"role":"user","content":"..."}]}
+
+← 200 OK  (no payment header needed — metered to your account)`}
+          </pre>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-zinc-400 border-b border-zinc-200">
+                <th className="pb-2 font-medium">Tier</th>
+                <th className="pb-2 font-medium">Discount</th>
+                <th className="pb-2 font-medium">Billing</th>
+              </tr>
+            </thead>
+            <tbody className="text-zinc-600">
+              <tr className="border-b border-zinc-100">
+                <td className="py-2.5">Internal</td>
+                <td className="py-2.5">50%</td>
+                <td className="py-2.5">Monthly BSV invoice</td>
+              </tr>
+              <tr className="border-b border-zinc-100">
+                <td className="py-2.5">Partner</td>
+                <td className="py-2.5">25%</td>
+                <td className="py-2.5">Monthly BSV invoice</td>
+              </tr>
+              <tr>
+                <td className="py-2.5">External</td>
+                <td className="py-2.5">0%</td>
+                <td className="py-2.5">Monthly BSV invoice</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold mb-4">Pricing</h2>
-          <p className="text-zinc-400 mb-12">
-            2× upstream cost. No hidden fees. No minimum. Pay exactly for what
-            you use.
+      <section id="pricing" className="border-t border-zinc-200">
+        <div className="max-w-3xl mx-auto px-6 py-20">
+          <h2 className="text-2xl font-bold mb-3">Pricing</h2>
+          <p className="text-zinc-500 mb-8">
+            2x upstream cost. Paid in BSV at the current exchange rate.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="border border-zinc-800 rounded-2xl p-8 bg-zinc-950 hover:border-orange-500/30 transition-colors">
-              <h3 className="font-mono text-lg font-bold mb-1">grok-3</h3>
-              <p className="text-sm text-zinc-500 mb-6">
-                Most capable Grok model
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Input</span>
-                  <span className="font-mono text-orange-400">
-                    $6.00 / 1M tokens
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Output</span>
-                  <span className="font-mono text-orange-400">
-                    $30.00 / 1M tokens
-                  </span>
-                </div>
-              </div>
-            </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-zinc-400 border-b border-zinc-200">
+                <th className="pb-2 font-medium">Model</th>
+                <th className="pb-2 font-medium text-right">Input</th>
+                <th className="pb-2 font-medium text-right">Output</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono text-zinc-700">
+              <tr className="border-b border-zinc-100">
+                <td className="py-3">grok-3</td>
+                <td className="py-3 text-right">$6.00 / 1M</td>
+                <td className="py-3 text-right">$30.00 / 1M</td>
+              </tr>
+              <tr className="border-b border-zinc-100">
+                <td className="py-3">grok-3-mini</td>
+                <td className="py-3 text-right">$0.60 / 1M</td>
+                <td className="py-3 text-right">$1.00 / 1M</td>
+              </tr>
+              <tr>
+                <td className="py-3">grok-2</td>
+                <td className="py-3 text-right">$4.00 / 1M</td>
+                <td className="py-3 text-right">$20.00 / 1M</td>
+              </tr>
+            </tbody>
+          </table>
 
-            <div className="border-2 border-orange-500/50 rounded-2xl p-8 bg-zinc-950 relative">
-              <div className="absolute -top-3 left-6 bg-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full">
-                BEST VALUE
-              </div>
-              <h3 className="font-mono text-lg font-bold mb-1">grok-3-mini</h3>
-              <p className="text-sm text-zinc-500 mb-6">
-                Fast and affordable
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Input</span>
-                  <span className="font-mono text-orange-400">
-                    $0.60 / 1M tokens
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Output</span>
-                  <span className="font-mono text-orange-400">
-                    $1.00 / 1M tokens
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border border-zinc-800 rounded-2xl p-8 bg-zinc-950 hover:border-orange-500/30 transition-colors">
-              <h3 className="font-mono text-lg font-bold mb-1">grok-2</h3>
-              <p className="text-sm text-zinc-500 mb-6">
-                Previous generation
-              </p>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Input</span>
-                  <span className="font-mono text-orange-400">
-                    $4.00 / 1M tokens
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Output</span>
-                  <span className="font-mono text-orange-400">
-                    $20.00 / 1M tokens
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-sm text-zinc-500 mt-6">
-            Prices in USD equivalent. You pay in BSV at current exchange rate.
-            Use{" "}
-            <code className="text-orange-400/80 bg-zinc-900 px-2 py-0.5 rounded">
-              POST /api/v1/price
-            </code>{" "}
-            to get exact satoshi cost before calling.
+          <p className="text-xs text-zinc-400 mt-4">
+            Use <code className="font-mono">POST /api/v1/price</code> to get
+            the exact cost in satoshis before calling.
           </p>
         </div>
       </section>
 
-      {/* Two Access Modes */}
-      <section className="py-24 border-t border-zinc-800 bg-zinc-950">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold mb-12">Two Ways to Pay</h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="border border-zinc-800 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-6 text-2xl">
-                ₿
-              </div>
-              <h3 className="text-xl font-bold mb-3">Anonymous BSV</h3>
-              <p className="text-zinc-400 mb-4">
-                No account needed. Pay per call with a BSV transaction. We
-                verify on-chain and serve the response.
-              </p>
-              <ul className="space-y-2 text-sm text-zinc-500">
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Zero friction
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> No data stored
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Blockchain receipt
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Full price (2×)
-                </li>
-              </ul>
-            </div>
-
-            <div className="border border-orange-500/30 rounded-2xl p-8 bg-orange-500/5">
-              <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center mb-6 text-2xl">
-                🔑
-              </div>
-              <h3 className="text-xl font-bold mb-3">API Key</h3>
-              <p className="text-zinc-400 mb-4">
-                For businesses and power users. Get an API key, calls are
-                metered and invoiced monthly in BSV.
-              </p>
-              <ul className="space-y-2 text-sm text-zinc-500">
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Usage dashboard
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Volume discounts
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Mates&apos; rates
-                  available
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-orange-400">✓</span> Monthly BSV
-                  invoicing
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Docs */}
-      <section id="docs" className="py-24 border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-4xl font-bold mb-4">Quick Start</h2>
-          <p className="text-zinc-400 mb-12">Three endpoints. That&apos;s it.</p>
+      {/* API Reference */}
+      <section id="reference" className="border-t border-zinc-200 bg-zinc-50">
+        <div className="max-w-3xl mx-auto px-6 py-20">
+          <h2 className="text-2xl font-bold mb-8">Reference</h2>
 
           <div className="space-y-8">
-            {/* Models */}
-            <div className="border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="bg-zinc-900 px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-mono font-bold rounded">
+            <div>
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-xs font-mono font-medium text-zinc-400">
                   GET
                 </span>
-                <code className="text-sm">/api/v1/models</code>
-                <span className="text-xs text-zinc-500 ml-auto">Free</span>
+                <code className="text-sm font-mono">/api/v1/models</code>
               </div>
-              <pre className="p-6 text-sm font-mono text-zinc-400">
-                {`curl https://bsvapi.com/api/v1/models`}
+              <p className="text-sm text-zinc-500 mb-3">
+                List available models. No authentication required.
+              </p>
+              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600">
+{`curl https://bsvapi.com/api/v1/models`}
               </pre>
             </div>
 
-            {/* Price */}
-            <div className="border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="bg-zinc-900 px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-mono font-bold rounded">
+            <div>
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-xs font-mono font-medium text-zinc-400">
                   POST
                 </span>
-                <code className="text-sm">/api/v1/price</code>
-                <span className="text-xs text-zinc-500 ml-auto">Free</span>
+                <code className="text-sm font-mono">/api/v1/price</code>
               </div>
-              <pre className="p-6 text-sm font-mono text-zinc-400 overflow-x-auto">
-                {`curl -X POST https://bsvapi.com/api/v1/price \\
+              <p className="text-sm text-zinc-500 mb-3">
+                Get a price estimate in satoshis. No authentication required.
+              </p>
+              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
+{`curl -X POST https://bsvapi.com/api/v1/price \\
   -H "Content-Type: application/json" \\
   -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'`}
               </pre>
             </div>
 
-            {/* Chat Completions */}
-            <div className="border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="bg-zinc-900 px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-mono font-bold rounded">
+            <div>
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-xs font-mono font-medium text-zinc-400">
                   POST
                 </span>
-                <code className="text-sm">/api/v1/chat/completions</code>
-                <span className="text-xs text-zinc-500 ml-auto">
-                  BSV payment or API key
-                </span>
+                <code className="text-sm font-mono">
+                  /api/v1/chat/completions
+                </code>
               </div>
-              <pre className="p-6 text-sm font-mono text-zinc-400 overflow-x-auto">
-                {`# With API key (registered clients):
+              <p className="text-sm text-zinc-500 mb-3">
+                OpenAI-compatible chat completions. Requires BSV payment or API
+                key.
+              </p>
+              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
+{`# Anonymous (BSV payment)
 curl -X POST https://bsvapi.com/api/v1/chat/completions \\
-  -H "Authorization: Bearer bsvapi_sk_npgx_xxx" \\
   -H "Content-Type: application/json" \\
+  -H "x-bsv-payment: <txid>" \\
   -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'
 
-# With BSV payment (anonymous):
+# Registered client (API key)
 curl -X POST https://bsvapi.com/api/v1/chat/completions \\
-  -H "x-bsv-payment: <txid>" \\
   -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer bsvapi_sk_yourcompany_xxx" \\
   -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'`}
               </pre>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24 border-t border-zinc-800 bg-zinc-950">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to build?
-          </h2>
-          <p className="text-xl text-zinc-400 mb-10 max-w-xl mx-auto">
-            No signup form. No onboarding email. Just start making requests.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a
-              href="#docs"
-              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-black font-bold rounded-xl hover:from-orange-400 hover:to-yellow-400 transition-all shadow-lg shadow-orange-500/25"
-            >
-              Read the Docs
-            </a>
-            <a
-              href="https://bitcoin-corp.com"
-              className="px-8 py-4 border border-zinc-700 rounded-xl hover:border-orange-500/50 transition-all"
-            >
-              Bitcoin Corporation →
-            </a>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800 py-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/images/bsvapi-logo.png"
-              alt="BSVAPI"
-              width={24}
-              height={24}
-              className="rounded"
-            />
-            <span className="text-sm text-zinc-500">
-              A{" "}
-              <a
-                href="https://bitcoin-corp.com"
-                className="text-orange-400 hover:text-orange-300"
-              >
-                Bitcoin Corporation
-              </a>{" "}
-              service
-            </span>
-          </div>
-          <div className="flex items-center gap-6 text-sm text-zinc-500">
-            <span>BRC-0105 compatible</span>
-            <span>·</span>
-            <span>BSV micropayments</span>
-            <span>·</span>
-            <span>OpenAI-compatible API</span>
-          </div>
+      <footer className="border-t border-zinc-200 py-8">
+        <div className="max-w-3xl mx-auto px-6 flex items-center justify-between text-xs text-zinc-400">
+          <span>
+            A{" "}
+            <a
+              href="https://bitcoin-corp.com"
+              className="text-zinc-600 hover:text-zinc-900"
+            >
+              Bitcoin Corporation
+            </a>{" "}
+            service
+          </span>
+          <span className="font-mono">BRC-0105</span>
         </div>
       </footer>
     </div>
