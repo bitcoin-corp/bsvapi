@@ -143,5 +143,9 @@ docker-compose.override.yml
 *.kubeconfig
 
 # Local development
-.local/ 
+.local/
 .vercel
+
+# Local data store
+.data/
+.env*.local
