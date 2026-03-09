@@ -1,37 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClients, saveClient, generateApiKey, type Client } from "@/lib/db";
-import crypto from "crypto";
+import { requireAdmin } from "@/lib/auth";
+import { getClients, saveClient, updateClient, generateApiKey } from "@/lib/db";
 
-function checkAdmin(request: NextRequest): boolean {
-  const auth = request.headers.get("authorization");
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey) return false;
-  return auth === `Bearer ${adminKey}`;
+async function checkAdmin(request: NextRequest) {
+  try {
+    await requireAdmin(request);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** GET /api/admin/clients — list all clients */
 export async function GET(request: NextRequest) {
-  if (!checkAdmin(request)) {
+  if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  return NextResponse.json(getClients());
+  const clients = await getClients();
+  return NextResponse.json(clients);
 }
 
-/** POST /api/admin/clients — create a new client */
 export async function POST(request: NextRequest) {
-  if (!checkAdmin(request)) {
+  if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { name, slug, tier, discountPercent, notes } = body as {
-    name?: string;
-    slug?: string;
-    tier?: Client["tier"];
-    discountPercent?: number;
-    notes?: string;
-  };
+  const { name, slug, tier, discountPercent, user_id } = await request.json();
 
   if (!name || !slug) {
     return NextResponse.json(
@@ -40,42 +33,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const client: Client = {
-    id: crypto.randomUUID(),
+  const key = generateApiKey(slug);
+  const client = await saveClient({
+    user_id: user_id || "00000000-0000-0000-0000-000000000000",
+    key,
     name,
-    slug,
-    apiKey: generateApiKey(slug),
     tier: tier || "external",
-    discountPercent: discountPercent ?? (tier === "internal" ? 50 : tier === "mates" ? 25 : 0),
-    active: true,
-    createdAt: new Date().toISOString(),
-    notes,
-  };
+    discount_percent:
+      discountPercent ?? (tier === "internal" ? 50 : tier === "mates" ? 25 : 0),
+  });
 
-  saveClient(client);
   return NextResponse.json(client, { status: 201 });
 }
 
-/** PUT /api/admin/clients — update a client */
 export async function PUT(request: NextRequest) {
-  if (!checkAdmin(request)) {
+  if (!(await checkAdmin(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { id, ...updates } = body;
-
+  const { id, ...updates } = await request.json();
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
-  const clients = getClients();
-  const existing = clients.find((c) => c.id === id);
-  if (!existing) {
-    return NextResponse.json({ error: "Client not found" }, { status: 404 });
-  }
-
-  const updated = { ...existing, ...updates, id: existing.id };
-  saveClient(updated);
+  const updated = await updateClient(id, updates);
   return NextResponse.json(updated);
 }

@@ -1,8 +1,3 @@
-/**
- * xAI / Grok API proxy.
- * Uses OpenAI-compatible API format.
- */
-
 const XAI_BASE_URL = process.env.XAI_BASE_URL || "https://api.x.ai/v1";
 const XAI_API_KEY = process.env.XAI_API_KEY || "";
 
@@ -39,9 +34,7 @@ export interface ChatCompletionResponse {
 export async function chatCompletion(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
-  if (!XAI_API_KEY) {
-    throw new Error("XAI_API_KEY not configured");
-  }
+  if (!XAI_API_KEY) throw new Error("XAI_API_KEY not configured");
 
   const res = await fetch(`${XAI_BASE_URL}/chat/completions`, {
     method: "POST",
@@ -54,7 +47,7 @@ export async function chatCompletion(
       messages: request.messages,
       temperature: request.temperature,
       max_tokens: request.max_tokens,
-      stream: false, // No streaming for MVP
+      stream: false,
     }),
   });
 
@@ -64,4 +57,37 @@ export async function chatCompletion(
   }
 
   return res.json();
+}
+
+/**
+ * Streaming chat completion — returns a ReadableStream of SSE chunks.
+ */
+export async function chatCompletionStream(
+  request: ChatCompletionRequest
+): Promise<{ stream: ReadableStream; response: Response }> {
+  if (!XAI_API_KEY) throw new Error("XAI_API_KEY not configured");
+
+  const res = await fetch(`${XAI_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${XAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: request.model,
+      messages: request.messages,
+      temperature: request.temperature,
+      max_tokens: request.max_tokens,
+      stream: true,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Grok API error (${res.status}): ${error}`);
+  }
+
+  if (!res.body) throw new Error("No stream body returned");
+
+  return { stream: res.body, response: res };
 }

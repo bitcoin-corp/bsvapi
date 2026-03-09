@@ -1,31 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createPaymentRequirement,
-  paymentHeaders,
-  verifyPayment,
-  markPrefixUsed,
-} from "@/lib/payment";
+import { createPaymentRequirement, paymentHeaders, verifyPayment } from "@/lib/payment";
 import { estimateCostSats, actualCostSats } from "@/lib/pricing";
-import { chatCompletion, type ChatMessage } from "@/lib/grok";
-import { getClientByApiKey, logUsage } from "@/lib/db";
+import { chatCompletion, chatCompletionStream, type ChatMessage } from "@/lib/grok";
+import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-/**
- * POST /api/v1/chat/completions
- *
- * OpenAI-compatible chat completions endpoint.
- *
- * Two auth modes:
- * 1. API key (Authorization: Bearer bsvapi_sk_xxx) — for registered clients, metered + invoiced
- * 2. BSV payment (x-bsv-payment header) — anonymous, pay-per-call
- */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.ceil((rateCheck.resetAt.getTime() - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
-    const { model, messages, temperature, max_tokens } = body as {
+    const { model, messages, temperature, max_tokens, stream } = body as {
       model?: string;
       messages?: ChatMessage[];
       temperature?: number;
       max_tokens?: number;
+      stream?: boolean;
     };
 
     if (!model || !messages?.length) {
@@ -46,28 +49,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for API key auth (registered clients)
+    // Check for API key auth
     const authHeader = request.headers.get("authorization");
     const apiKey = authHeader?.startsWith("Bearer bsvapi_sk_")
       ? authHeader.slice(7)
       : null;
-    const client = apiKey ? getClientByApiKey(apiKey) : null;
+    const client = apiKey ? await getClientByApiKey(apiKey) : null;
 
     // Apply client discount
     let effectiveCostSats = cost.satoshis;
     let effectiveCostUsd = cost.usdCost;
-    if (client && client.discountPercent > 0) {
-      const multiplier = 1 - client.discountPercent / 100;
-      effectiveCostSats = Math.max(
-        Math.ceil(cost.satoshis * multiplier),
-        100
-      );
+    if (client && client.discount_percent > 0) {
+      const multiplier = 1 - client.discount_percent / 100;
+      effectiveCostSats = Math.max(Math.ceil(cost.satoshis * multiplier), 100);
       effectiveCostUsd = cost.usdCost * multiplier;
     }
 
-    // If authenticated client — skip BSV payment, meter the call
+    // Authenticated client — deduct credits and proxy
     if (client) {
-      // Proxy to Grok
+      // Rate limit by key too
+      const keyRate = await checkRateLimit(`key:${client.key}`, 60_000, 120);
+      if (!keyRate.allowed) {
+        return NextResponse.json(
+          { error: "API key rate limit exceeded" },
+          { status: 429 }
+        );
+      }
+
+      // Deduct credits upfront
+      if (client.user_id) {
+        const deduction = await deductCredits(
+          client.user_id,
+          effectiveCostSats,
+          `api_call:${model}`
+        );
+        if (!deduction.success) {
+          return NextResponse.json(
+            {
+              error: "Insufficient credits",
+              credits_sats: deduction.balance,
+              required_sats: effectiveCostSats,
+            },
+            { status: 402 }
+          );
+        }
+      }
+
+      // Streaming mode
+      if (stream) {
+        const { stream: sseStream } = await chatCompletionStream({
+          model,
+          messages,
+          temperature,
+          max_tokens,
+        });
+
+        // Log estimated usage (actual tokens unknown until stream ends)
+        logUsage({
+          user_id: client.user_id || undefined,
+          api_key_id: client.id,
+          model,
+          input_tokens: 0,
+          output_tokens: 0,
+          cost_sats: effectiveCostSats,
+          cost_usd: effectiveCostUsd,
+        });
+
+        return new Response(sseStream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
+      }
+
+      // Non-streaming
       const grokResponse = await chatCompletion({
         model,
         messages,
@@ -75,34 +132,35 @@ export async function POST(request: NextRequest) {
         max_tokens,
       });
 
-      // Calculate actual cost from real token usage
       const usage = grokResponse.usage;
       const realCostSats = await actualCostSats(
         model,
         usage?.prompt_tokens || 0,
         usage?.completion_tokens || 0
       );
-      const discountedRealCost = client.discountPercent > 0
-        ? Math.max(Math.ceil(realCostSats * (1 - client.discountPercent / 100)), 100)
-        : realCostSats;
+      const discountedRealCost =
+        client.discount_percent > 0
+          ? Math.max(
+              Math.ceil(realCostSats * (1 - client.discount_percent / 100)),
+              100
+            )
+          : realCostSats;
 
-      // Log usage
       logUsage({
-        clientId: client.id,
+        user_id: client.user_id || undefined,
+        api_key_id: client.id,
         model,
-        inputTokens: usage?.prompt_tokens || 0,
-        outputTokens: usage?.completion_tokens || 0,
-        costSatoshis: discountedRealCost,
-        costUsd: effectiveCostUsd,
-        timestamp: new Date().toISOString(),
+        input_tokens: usage?.prompt_tokens || 0,
+        output_tokens: usage?.completion_tokens || 0,
+        cost_sats: discountedRealCost,
+        cost_usd: effectiveCostUsd,
       });
 
       return NextResponse.json({
         ...grokResponse,
         billing: {
-          client: client.slug,
           tier: client.tier,
-          discountPercent: client.discountPercent,
+          discountPercent: client.discount_percent,
           costSatoshis: discountedRealCost,
         },
       });
@@ -122,17 +180,14 @@ export async function POST(request: NextRequest) {
           usdEquivalent: `$${effectiveCostUsd.toFixed(6)}`,
           breakdown: cost.breakdown,
           instructions:
-            "Send BSV payment and include txid in x-bsv-payment header. Or use an API key: Authorization: Bearer bsvapi_sk_xxx",
+            "Send BSV payment and include txid in x-bsv-payment header. Or sign up at bsvapi.com for an API key.",
         },
         { status: 402, headers }
       );
     }
 
     // Verify BSV payment
-    const verification = await verifyPayment(
-      paymentHeader,
-      effectiveCostSats
-    );
+    const verification = await verifyPayment(paymentHeader, effectiveCostSats);
 
     if (!verification.valid) {
       return NextResponse.json(
@@ -141,7 +196,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Payment verified — proxy to Grok
+    // Streaming for anonymous payment
+    if (stream) {
+      const { stream: sseStream } = await chatCompletionStream({
+        model,
+        messages,
+        temperature,
+        max_tokens,
+      });
+
+      logUsage({
+        model,
+        input_tokens: 0,
+        output_tokens: 0,
+        cost_sats: effectiveCostSats,
+        cost_usd: effectiveCostUsd,
+        payment_txid: verification.txid,
+      });
+
+      return new Response(sseStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    // Non-streaming anonymous
     const grokResponse = await chatCompletion({
       model,
       messages,
@@ -149,20 +231,13 @@ export async function POST(request: NextRequest) {
       max_tokens,
     });
 
-    // Mark derivation prefix as used
-    const prefix = request.headers.get("x-bsv-payment-derivation-prefix");
-    if (prefix) markPrefixUsed(prefix);
-
-    // Log anonymous usage
     logUsage({
-      clientId: "anonymous",
       model,
-      inputTokens: grokResponse.usage?.prompt_tokens || 0,
-      outputTokens: grokResponse.usage?.completion_tokens || 0,
-      costSatoshis: effectiveCostSats,
-      costUsd: effectiveCostUsd,
-      paymentTxid: verification.txid,
-      timestamp: new Date().toISOString(),
+      input_tokens: grokResponse.usage?.prompt_tokens || 0,
+      output_tokens: grokResponse.usage?.completion_tokens || 0,
+      cost_sats: effectiveCostSats,
+      cost_usd: effectiveCostUsd,
+      payment_txid: verification.txid,
     });
 
     return NextResponse.json({

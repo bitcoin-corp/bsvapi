@@ -1,17 +1,5 @@
-/**
- * BRC-0105 HTTP Service Monetization — Simplified Implementation
- *
- * Flow:
- * 1. Client sends request without payment
- * 2. Server responds 402 with x-bsv-payment-satoshis-required + derivation prefix
- * 3. Client constructs BSV tx paying that amount, sends in x-bsv-payment header
- * 4. Server verifies tx and processes request
- *
- * For MVP, we verify the transaction exists and pays sufficient amount
- * using WhatsOnChain API. Full BRC-0105 with mutual auth (BRC-103) comes later.
- */
-
 import crypto from "crypto";
+import { isTxidUsed, recordTxid } from "./db";
 
 export interface PaymentRequirement {
   version: string;
@@ -27,10 +15,9 @@ export interface PaymentVerification {
   error?: string;
 }
 
-/**
- * Generate a 402 Payment Required response with BRC-0105 headers.
- */
-export function createPaymentRequirement(satoshis: number): PaymentRequirement {
+export function createPaymentRequirement(
+  satoshis: number
+): PaymentRequirement {
   return {
     version: "1",
     satoshisRequired: satoshis,
@@ -39,10 +26,9 @@ export function createPaymentRequirement(satoshis: number): PaymentRequirement {
   };
 }
 
-/**
- * Build 402 response headers from a payment requirement.
- */
-export function paymentHeaders(req: PaymentRequirement): Record<string, string> {
+export function paymentHeaders(
+  req: PaymentRequirement
+): Record<string, string> {
   return {
     "x-bsv-payment-version": req.version,
     "x-bsv-payment-satoshis-required": req.satoshisRequired.toString(),
@@ -52,13 +38,8 @@ export function paymentHeaders(req: PaymentRequirement): Record<string, string> 
 }
 
 /**
- * Verify a BSV payment from the x-bsv-payment header.
- *
- * MVP approach: Accept raw txid or tx hex.
- * Verify via WhatsOnChain that the tx exists and outputs >= required amount.
- *
- * TODO: Full BRC-0105 verification with SPV proof, derivation prefix matching,
- * and double-spend protection.
+ * Verify a BSV payment. Checks WhatsOnChain for tx existence and value.
+ * Uses persistent DB for replay protection.
  */
 export async function verifyPayment(
   paymentHeader: string | null,
@@ -69,16 +50,11 @@ export async function verifyPayment(
   }
 
   try {
-    // For MVP: accept a JSON payload with txid
-    // Format: { "txid": "abc123...", "vout": 0 }
-    // Or simply a raw txid string
     let txid: string;
-
     try {
       const parsed = JSON.parse(paymentHeader);
       txid = parsed.txid;
     } catch {
-      // Assume raw txid
       txid = paymentHeader.trim();
     }
 
@@ -86,7 +62,12 @@ export async function verifyPayment(
       return { valid: false, error: "Invalid txid format" };
     }
 
-    // Verify tx exists on-chain via WhatsOnChain
+    // Check replay
+    if (await isTxidUsed(txid)) {
+      return { valid: false, error: "Transaction already used" };
+    }
+
+    // Verify on-chain
     const res = await fetch(
       `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}`
     );
@@ -97,12 +78,12 @@ export async function verifyPayment(
 
     const tx = await res.json();
 
-    // Sum all outputs to find total value
-    // In production, we'd check specific output addresses match our derivation
-    const totalOutputSats = tx.vout?.reduce(
-      (sum: number, out: { value: number }) => sum + Math.round(out.value * 1e8),
-      0
-    ) || 0;
+    const totalOutputSats =
+      tx.vout?.reduce(
+        (sum: number, out: { value: number }) =>
+          sum + Math.round(out.value * 1e8),
+        0
+      ) || 0;
 
     if (totalOutputSats < requiredSatoshis) {
       return {
@@ -110,6 +91,9 @@ export async function verifyPayment(
         error: `Insufficient payment: ${totalOutputSats} sats < ${requiredSatoshis} required`,
       };
     }
+
+    // Mark as used
+    await recordTxid(txid);
 
     return {
       valid: true,
@@ -122,21 +106,4 @@ export async function verifyPayment(
       error: `Payment verification failed: ${err instanceof Error ? err.message : "unknown error"}`,
     };
   }
-}
-
-// Track used derivation prefixes to prevent replay attacks
-const usedPrefixes = new Set<string>();
-const MAX_PREFIX_CACHE = 10000;
-
-export function markPrefixUsed(prefix: string): void {
-  usedPrefixes.add(prefix);
-  // Evict old entries if cache is too large
-  if (usedPrefixes.size > MAX_PREFIX_CACHE) {
-    const first = usedPrefixes.values().next().value;
-    if (first) usedPrefixes.delete(first);
-  }
-}
-
-export function isPrefixUsed(prefix: string): boolean {
-  return usedPrefixes.has(prefix);
 }

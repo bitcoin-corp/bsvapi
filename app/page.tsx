@@ -25,6 +25,12 @@ export default function Home() {
             <a href="#reference" className="hover:text-zinc-900">
               Reference
             </a>
+            <a
+              href="/login"
+              className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800"
+            >
+              Sign in
+            </a>
           </div>
         </div>
       </nav>
