@@ -7,6 +7,19 @@ const UPSTREAM_PRICING: Record<string, { input: number; output: number }> = {
 
 const MARKUP = parseFloat(process.env.MARKUP_MULTIPLIER || "2");
 
+// Fixed-price services (USD per request)
+const SERVICE_PRICING: Record<string, { usd: number; description: string }> = {
+  // AtlasCloud — images
+  "image-sdxl": { usd: 0.02, description: "SDXL image generation" },
+  "image-flux": { usd: 0.03, description: "FLUX Schnell image generation" },
+  // AtlasCloud — video
+  "video-wan": { usd: 0.15, description: "Wan 2.1 text/image-to-video" },
+  "video-kling": { usd: 0.30, description: "Kling video generation" },
+  // Replicate
+  "whisper": { usd: 0.006, description: "Whisper large-v3 transcription (per minute)" },
+  "music-gen": { usd: 0.05, description: "MusicGen audio generation" },
+};
+
 // BSV/USD rate — updated periodically
 let bsvUsdRate = 0;
 let rateLastUpdated = 0;
@@ -99,6 +112,57 @@ export async function actualCostSats(
   return Math.max(Math.ceil(bsvAmount * 1e8), 500);
 }
 
-export function getSupportedModels(): string[] {
-  return Object.keys(UPSTREAM_PRICING);
+export async function getServiceCostSats(
+  service: string,
+  units: number = 1
+): Promise<{ satoshis: number; usdCost: number; description: string }> {
+  const pricing = SERVICE_PRICING[service];
+  if (!pricing) {
+    throw new Error(
+      `Unknown service: ${service}. Available: ${Object.keys(SERVICE_PRICING).join(", ")}`
+    );
+  }
+  const totalUsd = pricing.usd * MARKUP * units;
+  const rate = await getBsvUsdRate();
+  const satoshis = Math.max(Math.ceil((totalUsd / rate) * 1e8), 100);
+  return { satoshis, usdCost: totalUsd, description: pricing.description };
+}
+
+export function getSupportedServices(): Array<{
+  id: string;
+  description: string;
+  usdPerUnit: number;
+}> {
+  return Object.entries(SERVICE_PRICING).map(([id, p]) => ({
+    id,
+    description: p.description,
+    usdPerUnit: p.usd * MARKUP,
+  }));
+}
+
+export function getSupportedModels(): Array<{
+  id: string;
+  type: string;
+  provider: string;
+}> {
+  const models = Object.keys(UPSTREAM_PRICING).map((id) => ({
+    id,
+    type: "chat",
+    provider: "xai",
+  }));
+  const services = Object.keys(SERVICE_PRICING).map((id) => ({
+    id,
+    type: id.startsWith("image")
+      ? "image"
+      : id.startsWith("video")
+        ? "video"
+        : id === "whisper"
+          ? "transcription"
+          : "audio",
+    provider:
+      id.startsWith("image") || id.startsWith("video")
+        ? "atlascloud"
+        : "replicate",
+  }));
+  return [...models, ...services];
 }
