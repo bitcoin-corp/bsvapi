@@ -1,4 +1,15 @@
-import { isTxidUsed, recordTxid } from "./db";
+import { isTxidUsed, recordTxid as dbRecordTxid } from "./db";
+
+/**
+ * Re-exported so route handlers can mark a payment as finalised
+ * only once the upstream proxy call has succeeded. This is critical
+ * for the "user paid, upstream 500'd" failure mode: if we burn the
+ * txid at verification time, the user has no way to retry without
+ * paying a second time.
+ */
+export async function finaliseTxid(txid: string): Promise<void> {
+  await dbRecordTxid(txid);
+}
 
 /**
  * BSVAPI x402 payment requirement.
@@ -187,8 +198,12 @@ export async function verifyPayment(
       };
     }
 
-    await recordTxid(txid);
-
+    // NOTE: we do NOT mark the txid as used here. The caller must
+    // call finaliseTxid(txid) after the upstream proxy call has
+    // succeeded. Moving recordTxid here would burn the user's
+    // payment even if the upstream call later throws — making the
+    // BSV effectively unrefundable. See commit 48d9af3 for the
+    // live-swarm incident that motivated this split.
     return {
       valid: true,
       txid,

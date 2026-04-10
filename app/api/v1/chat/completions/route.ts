@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPaymentRequirement, paymentHeaders, verifyPayment } from "@/lib/payment";
+import {
+  createPaymentRequirement,
+  paymentHeaders,
+  verifyPayment,
+  finaliseTxid,
+} from "@/lib/payment";
 import { estimateCostSats, actualCostSats } from "@/lib/pricing";
 import { chatCompletion, chatCompletionStream, type ChatMessage } from "@/lib/grok";
 import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
@@ -198,6 +203,9 @@ export async function POST(request: NextRequest) {
 
     // Streaming for anonymous payment
     if (stream) {
+      // Upstream call — if it throws, the outer catch returns 500
+      // and finaliseTxid is never reached, so the user can retry
+      // with the same txid without paying twice.
       const { stream: sseStream } = await chatCompletionStream({
         model,
         messages,
@@ -205,6 +213,7 @@ export async function POST(request: NextRequest) {
         max_tokens,
       });
 
+      await finaliseTxid(verification.txid!);
       logUsage({
         model,
         input_tokens: 0,
@@ -231,6 +240,7 @@ export async function POST(request: NextRequest) {
       max_tokens,
     });
 
+    await finaliseTxid(verification.txid!);
     logUsage({
       model,
       input_tokens: grokResponse.usage?.prompt_tokens || 0,

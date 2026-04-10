@@ -3,6 +3,7 @@ import {
   createPaymentRequirement,
   paymentHeaders,
   verifyPayment,
+  finaliseTxid,
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateMusic } from "@/lib/replicate";
@@ -152,8 +153,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Upstream call — throws propagate to the outer catch and we
+    // deliberately do NOT finaliseTxid, so the user can retry.
     const result = await generateMusic({ prompt, duration });
 
+    await finaliseTxid(verification.txid!);
     logUsage({
       model: "music-gen",
       input_tokens: 0,
