@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         model: model || "sdxl",
         width,
         height,
-        num_outputs,
+        
       });
 
       logUsage({
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       model: model || "sdxl",
       width,
       height,
-      num_outputs,
+      
     });
 
     logUsage({

@@ -9,9 +9,9 @@ const MARKUP = parseFloat(process.env.MARKUP_MULTIPLIER || "2");
 
 // Fixed-price services (USD per request)
 const SERVICE_PRICING: Record<string, { usd: number; description: string }> = {
-  // AtlasCloud — images
-  "image-sdxl": { usd: 0.02, description: "SDXL image generation" },
-  "image-flux": { usd: 0.03, description: "FLUX Schnell image generation" },
+  // AtlasCloud — images (real upstream costs, pre-markup)
+  "image-sdxl": { usd: 0.01, description: "z-image/turbo image generation" },
+  "image-flux": { usd: 0.032, description: "seedream-v5.0-lite image generation" },
   // AtlasCloud — video
   "video-wan": { usd: 0.15, description: "Wan 2.1 text/image-to-video" },
   "video-kling": { usd: 0.30, description: "Kling video generation" },
