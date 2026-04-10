@@ -144,18 +144,35 @@ export async function verifyPayment(
       return { valid: false, error: "Transaction already used" };
     }
 
-    // Fetch the transaction from WhatsOnChain. The response lives in
-    // a mempool state for up to a few minutes before confirmation;
-    // we accept unconfirmed txs so long as they resolve in WoC.
-    const res = await fetch(
-      `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}`,
-    );
-
-    if (!res.ok) {
+    // Fetch the transaction from WhatsOnChain. Clients often pay via
+    // ARC (GorillaPool / Taal) and retry immediately, but WoC's
+    // indexer can lag a few seconds behind the relay network. We
+    // retry the lookup a few times before giving up so the happy
+    // path works end-to-end without the client having to know about
+    // indexer propagation.
+    const retryDelays = [1500, 2500, 4000];
+    let tx: { vout?: Array<Record<string, unknown>> } | null = null;
+    for (let i = 0; i <= retryDelays.length; i++) {
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, retryDelays[i - 1]));
+      }
+      const res = await fetch(
+        `https://api.whatsonchain.com/v1/bsv/main/tx/${txid}`,
+      );
+      if (res.ok) {
+        tx = await res.json();
+        break;
+      }
+      if (res.status !== 404) {
+        return {
+          valid: false,
+          error: `WhatsOnChain lookup failed: ${res.status}`,
+        };
+      }
+    }
+    if (!tx) {
       return { valid: false, error: "Transaction not found on-chain" };
     }
-
-    const tx = await res.json();
 
     const paidToHotWallet = sumOutputsToAddress(tx, hotWalletAddress);
     if (paidToHotWallet < requiredSatoshis) {
