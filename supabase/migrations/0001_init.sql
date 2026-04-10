@@ -89,22 +89,28 @@ CREATE INDEX IF NOT EXISTS bsvapi_credit_txns_user_idx
   ON bsvapi_credit_txns (user_id, created_at DESC);
 
 -- ---------------------------------------------------------------------
--- bsvapi_rate_limits — sliding-window rate counters keyed by (ip or token, window)
+-- bsvapi_rate_limits — sliding-window rate counters keyed by (ip or token, window_start)
+--
+-- Column name is `window_start` rather than `window` to avoid the
+-- PostgreSQL reserved keyword, and to match the table that was
+-- originally deployed by hand before this migration was versioned.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS bsvapi_rate_limits (
-  key        text          NOT NULL,
-  window_at  timestamptz   NOT NULL,
-  count      integer       NOT NULL DEFAULT 0,
-  PRIMARY KEY (key, window_at)
+  key           text          NOT NULL,
+  window_start  timestamptz   NOT NULL,
+  count         integer       NOT NULL DEFAULT 1,
+  PRIMARY KEY (key, window_start)
 );
 
 CREATE INDEX IF NOT EXISTS bsvapi_rate_limits_window_idx
-  ON bsvapi_rate_limits (window_at);
+  ON bsvapi_rate_limits (window_start);
 
 -- ---------------------------------------------------------------------
 -- bsvapi_increment_rate_limit(p_key text, p_window timestamptz)
 --   Atomic UPSERT + increment of the counter. Returns the new count.
---   Called by lib/rate-limit.ts on every request.
+--   Called by lib/rate-limit.ts on every request. The parameter is
+--   still named p_window because the TypeScript caller passes that
+--   key name; internally it maps to the window_start column.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION bsvapi_increment_rate_limit(
   p_key     text,
@@ -116,9 +122,9 @@ AS $$
 DECLARE
   new_count integer;
 BEGIN
-  INSERT INTO bsvapi_rate_limits (key, window_at, count)
+  INSERT INTO bsvapi_rate_limits (key, window_start, count)
   VALUES (p_key, p_window, 1)
-  ON CONFLICT (key, window_at)
+  ON CONFLICT (key, window_start)
   DO UPDATE SET count = bsvapi_rate_limits.count + 1
   RETURNING count INTO new_count;
   RETURN new_count;
@@ -137,7 +143,7 @@ DECLARE
   deleted integer;
 BEGIN
   DELETE FROM bsvapi_rate_limits
-  WHERE window_at < now() - interval '1 day';
+  WHERE window_start < now() - interval '1 day';
   GET DIAGNOSTICS deleted = ROW_COUNT;
   RETURN deleted;
 END;
