@@ -40,8 +40,11 @@ export interface PaymentVerification {
  * 500 than to advertise an unusable payment flow.
  */
 function getHotWalletAddress(): string {
-  const addr = process.env.BSVAPI_HOT_WALLET_ADDRESS;
-  if (!addr || addr.length === 0) {
+  // Trim whitespace and newlines: when the env var is set via CLI
+  // with `echo | vercel env add` the trailing newline leaks in and
+  // causes Array.includes checks on scriptPubKey.addresses to miss.
+  const addr = (process.env.BSVAPI_HOT_WALLET_ADDRESS ?? "").trim();
+  if (addr.length === 0) {
     throw new Error(
       "BSVAPI_HOT_WALLET_ADDRESS is not set — generate a wallet via " +
         "scripts/generate-hot-wallet.ts and copy the address into .env.local",
