@@ -30,17 +30,23 @@ export interface MusicGenResponse {
 async function createPrediction(
   model: string,
   input: Record<string, unknown>
-): Promise<{ id: string; status: string }> {
+): Promise<{ id: string; status: string; output?: unknown }> {
   if (!REPLICATE_KEY) throw new Error("REPLICATE_API_TOKEN not configured");
 
-  const res = await fetch(`${REPLICATE_URL}/predictions`, {
+  // Use the model-scoped endpoint (POST /v1/models/{owner}/{name}/predictions)
+  // so Replicate picks the latest version automatically and the request
+  // body only needs { input: ... }. The legacy /v1/predictions endpoint
+  // requires an explicit { version: "<hash>" } field and rejects { model },
+  // which is why this previously returned 422 "version is required,
+  // Additional property model is not allowed" for every music call.
+  const res = await fetch(`${REPLICATE_URL}/models/${model}/predictions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${REPLICATE_KEY}`,
       Prefer: "wait",
     },
-    body: JSON.stringify({ model, input }),
+    body: JSON.stringify({ input }),
   });
 
   if (!res.ok) {
