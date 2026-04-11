@@ -27,26 +27,68 @@ export interface MusicGenResponse {
   output?: string; // audio URL
 }
 
+/**
+ * Cache of model → latest version hash. Filled lazily on first use
+ * of each model, keyed by `owner/name`. Versions rarely change for
+ * a given model, and stale cache entries just mean a new prediction
+ * runs against a slightly older version until the process restarts.
+ */
+const versionCache = new Map<string, string>();
+
+async function getLatestVersion(model: string): Promise<string> {
+  const cached = versionCache.get(model);
+  if (cached) return cached;
+
+  const res = await fetch(`${REPLICATE_URL}/models/${model}`, {
+    headers: { Authorization: `Bearer ${REPLICATE_KEY}` },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Replicate model lookup (${model}) failed with ${res.status}: ${await res.text()}`
+    );
+  }
+  const body = (await res.json()) as {
+    latest_version?: { id?: string };
+  };
+  const id = body.latest_version?.id;
+  if (!id) {
+    throw new Error(
+      `Replicate model ${model} has no latest_version.id in GET response`
+    );
+  }
+  versionCache.set(model, id);
+  return id;
+}
+
 async function createPrediction(
   model: string,
   input: Record<string, unknown>
 ): Promise<{ id: string; status: string; output?: unknown }> {
   if (!REPLICATE_KEY) throw new Error("REPLICATE_API_TOKEN not configured");
 
-  // Use the model-scoped endpoint (POST /v1/models/{owner}/{name}/predictions)
-  // so Replicate picks the latest version automatically and the request
-  // body only needs { input: ... }. The legacy /v1/predictions endpoint
-  // requires an explicit { version: "<hash>" } field and rejects { model },
-  // which is why this previously returned 422 "version is required,
-  // Additional property model is not allowed" for every music call.
-  const res = await fetch(`${REPLICATE_URL}/models/${model}/predictions`, {
+  // Two-step flow that works for both official and community
+  // models on Replicate:
+  //
+  //   1. GET  /v1/models/{owner}/{name}        → returns latest_version.id
+  //   2. POST /v1/predictions {version, input} → runs the model
+  //
+  // The legacy /v1/predictions endpoint requires an explicit
+  // `version` field (it rejects `{model, input}` with 422 "version
+  // is required"). The model-scoped `/v1/models/{owner}/{name}/predictions`
+  // endpoint only exists for models marked as "official" by
+  // Replicate; non-official models like meta/musicgen return 404
+  // there. Looking up the version first handles both cases in one
+  // code path.
+  const version = await getLatestVersion(model);
+
+  const res = await fetch(`${REPLICATE_URL}/predictions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${REPLICATE_KEY}`,
       Prefer: "wait",
     },
-    body: JSON.stringify({ input }),
+    body: JSON.stringify({ version, input }),
   });
 
   if (!res.ok) {
