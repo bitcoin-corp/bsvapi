@@ -7,7 +7,7 @@ import {
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateVideo } from "@/lib/atlascloud";
-import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
+import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -105,12 +105,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const result = await generateVideo({
+      const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${serviceKey}`, () => generateVideo({
         prompt,
         model: model || "wan-2.1",
         image_url,
         duration,
-      });
+      }));
 
       logUsage({
         user_id: client.user_id || undefined,

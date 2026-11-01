@@ -7,7 +7,7 @@ import {
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateMusic } from "@/lib/replicate";
-import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
+import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const result = await generateMusic({ prompt, duration });
+      const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:music-gen`, () => generateMusic({ prompt, duration }));
 
       logUsage({
         user_id: client.user_id || undefined,

@@ -165,6 +165,23 @@ export async function addCredits(
   return newBalance;
 }
 
+/**
+ * Run an upstream call for credits already deducted; if it throws, give the credits back so a failed call costs nothing.
+ */
+export async function refundOnFail<T>(
+  userId: string | null | undefined,
+  amountSats: number,
+  reason: string,
+  call: () => Promise<T>
+): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    if (userId && amountSats > 0) await addCredits(userId, amountSats, `refund:${reason}`).catch(() => {});
+    throw err;
+  }
+}
+
 export async function deductCredits(
   userId: string,
   amountSats: number,
