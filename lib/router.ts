@@ -40,9 +40,10 @@ export const MODELS: ModelEntry[] = [
 export const ALIASES: Record<string, string[]> = {
   "b/chat": ["grok-3-mini", "grok-3"],
   "b/fast": ["grok-3-mini"],
-  "b/smart": ["grok-3", "grok-3-mini"],
+  "b/smart": ["grok-3"],
 };
 
+const cost = (m: { input: number; output: number }) => m.input + m.output;
 const enabled = (m: ModelEntry) => !!UPSTREAMS[m.provider].key;
 
 /** Rolling failures per provider in this instance; a provider with 3+ recent failures is tried last. */
@@ -57,21 +58,17 @@ export function candidates(model: string): ModelEntry[] {
   const list = ids.map((id) => MODELS.find((m) => m.id === id)).filter((m): m is ModelEntry => !!m && enabled(m));
   if (!ALIASES[model]) return list;
   return list.sort(
-    (a, b) => Number(recentFailures(a.provider) >= 3) - Number(recentFailures(b.provider) >= 3) || a.input + a.output - (b.input + b.output)
+    (a, b) => Number(recentFailures(a.provider) >= 3) - Number(recentFailures(b.provider) >= 3) || cost(a) - cost(b)
   );
 }
 
 /**
- * Price used for a request: an alias is priced at its dearest candidate so a fallback never costs more than was
- * charged (key holders get the change back from the real usage).
+ * Price used for a request: an alias is priced at its first (cheapest healthy) candidate, and route() only falls back
+ * to candidates that cost no more, so the payer is never charged for a dearer model than the one that may answer.
  */
 export function priceFor(model: string): { input: number; output: number } | null {
-  const list = candidates(model);
-  if (!list.length) return null;
-  return list.reduce((a, b) => (b.input + b.output > a.input + a.output ? { input: b.input, output: b.output } : a), {
-    input: list[0].input,
-    output: list[0].output,
-  });
+  const first = candidates(model)[0];
+  return first ? { input: first.input, output: first.output } : null;
 }
 
 /** Retry on another provider only for outages: network, timeout, rate limit, 5xx. */
@@ -79,8 +76,9 @@ const retryable = (err: unknown) =>
   err instanceof UpstreamError && (err.status === 0 || err.status === 408 || err.status === 429 || err.status >= 500);
 
 async function route<T>(model: string, call: (m: ModelEntry) => Promise<T>): Promise<{ result: T; used: ModelEntry }> {
-  const list = candidates(model);
-  if (!list.length) throw new UpstreamError(`Unsupported model: ${model}`, 400, "router");
+  const all = candidates(model);
+  if (!all.length) throw new UpstreamError(`Unsupported model: ${model}`, 400, "router");
+  const list = all.filter((m) => cost(m) <= cost(all[0]));
   let last: unknown;
   for (const m of list) {
     try {
