@@ -1,9 +1,7 @@
+import { priceFor, listChatModels } from "./router";
+
 // Upstream costs per 1M tokens (USD)
-const UPSTREAM_PRICING: Record<string, { input: number; output: number }> = {
-  "grok-3": { input: 3, output: 15 },
-  "grok-3-mini": { input: 0.30, output: 0.50 },
-  "grok-2": { input: 2, output: 10 },
-};
+// Chat model prices live in lib/router.ts (MODELS); aliases are priced at their dearest candidate.
 
 const MARKUP = parseFloat(process.env.MARKUP_MULTIPLIER || "2");
 
@@ -63,9 +61,9 @@ export async function estimateCostSats(
   model: string,
   messages: Array<{ role: string; content: string }>
 ): Promise<{ satoshis: number; usdCost: number; breakdown: string }> {
-  const pricing = UPSTREAM_PRICING[model];
+  const pricing = priceFor(model);
   if (!pricing) {
-    throw new Error(`Unsupported model: ${model}. Available: ${Object.keys(UPSTREAM_PRICING).join(", ")}`);
+    throw new Error(`Unsupported model: ${model}. Available: ${listChatModels().map((m) => m.id).join(", ")}`);
   }
 
   // Rough token estimate: ~4 chars per token
@@ -100,7 +98,7 @@ export async function actualCostSats(
   inputTokens: number,
   outputTokens: number
 ): Promise<number> {
-  const pricing = UPSTREAM_PRICING[model];
+  const pricing = priceFor(model);
   if (!pricing) return 0;
 
   const inputCostUsd = (inputTokens / 1_000_000) * pricing.input * MARKUP;
@@ -145,11 +143,7 @@ export function getSupportedModels(): Array<{
   type: string;
   provider: string;
 }> {
-  const models = Object.keys(UPSTREAM_PRICING).map((id) => ({
-    id,
-    type: "chat",
-    provider: "xai",
-  }));
+  const models = listChatModels().map((m) => ({ id: m.id, type: "chat", provider: m.provider }));
   const services = Object.keys(SERVICE_PRICING).map((id) => ({
     id,
     type: id.startsWith("image")

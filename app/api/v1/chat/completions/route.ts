@@ -6,7 +6,8 @@ import {
   releaseOnFail,
 } from "@/lib/payment";
 import { estimateCostSats, actualCostSats } from "@/lib/pricing";
-import { chatCompletion, chatCompletionStream, type ChatMessage } from "@/lib/grok";
+import { type ChatMessage } from "@/lib/grok";
+import { chatCompletion, chatCompletionStream } from "@/lib/router";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail, addCredits } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
