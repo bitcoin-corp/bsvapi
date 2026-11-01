@@ -7,7 +7,7 @@ import {
 } from "@/lib/payment";
 import { estimateCostSats, actualCostSats } from "@/lib/pricing";
 import { chatCompletion, chatCompletionStream, type ChatMessage } from "@/lib/grok";
-import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
+import { getClientByApiKey, logUsage, deductCredits, refundOnFail, addCredits } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -102,12 +102,12 @@ export async function POST(request: NextRequest) {
 
       // Streaming mode
       if (stream) {
-        const { stream: sseStream } = await chatCompletionStream({
+        const { stream: sseStream } = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletionStream({
           model,
           messages,
           temperature,
           max_tokens,
-        });
+        }));
 
         // Log estimated usage (actual tokens unknown until stream ends)
         logUsage({
@@ -130,12 +130,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Non-streaming
-      const grokResponse = await chatCompletion({
+      const grokResponse = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletion({
         model,
         messages,
         temperature,
         max_tokens,
-      });
+      }));
 
       const usage = grokResponse.usage;
       const realCostSats = await actualCostSats(
@@ -150,6 +150,10 @@ export async function POST(request: NextRequest) {
               100
             )
           : realCostSats;
+
+      // Charge what the call actually cost: the estimate was deducted up front, so give back the difference.
+      const change = effectiveCostSats - discountedRealCost;
+      if (client.user_id && change > 0) await addCredits(client.user_id, change, `change:${model}`);
 
       logUsage({
         user_id: client.user_id || undefined,

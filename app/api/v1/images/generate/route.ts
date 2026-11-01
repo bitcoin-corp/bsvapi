@@ -7,7 +7,7 @@ import {
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateImage } from "@/lib/atlascloud";
-import { getClientByApiKey, logUsage, deductCredits } from "@/lib/db";
+import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const result = await generateImage({
+      const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${serviceKey}`, () => generateImage({
         prompt,
         model: model || "sdxl",
         width,
         height,
         
-      });
+      }));
 
       logUsage({
         user_id: client.user_id || undefined,
