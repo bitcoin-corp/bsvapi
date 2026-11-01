@@ -3,7 +3,7 @@ import {
   createPaymentRequirement,
   paymentHeaders,
   verifyPayment,
-  finaliseTxid,
+  releaseOnFail,
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateImage } from "@/lib/atlascloud";
@@ -166,20 +166,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upstream call — if it throws, the outer catch returns 500
-    // and we deliberately DO NOT finaliseTxid, so the caller can
-    // retry the same payment txid without paying again.
-    const result = await generateImage({
+    // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
+    const result = await releaseOnFail(verification.txid!, () => generateImage({
       prompt,
       model: model || "sdxl",
       width,
       height,
-    });
-
-    // Upstream succeeded. Finalise the payment (mark txid used for
-    // replay protection) and log the usage. Both run before we
-    // return so the response is consistent with the database state.
-    await finaliseTxid(verification.txid!);
+    }));
     logUsage({
       model: serviceKey,
       input_tokens: 0,
