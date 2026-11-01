@@ -12,12 +12,16 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/user/credits — Add credits (for now, admin-only or via BSV payment)
+ * POST /api/user/credits — Add credits. Admin only until deposit txids are verified on chain.
  * In future: HandCash payment flow or tokenised credits
  */
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
+    // Deposits are not verified on chain yet, so self-service crediting would mint free credit. Admin only until then.
+    if (!user.is_admin) {
+      return NextResponse.json({ error: "Deposits are not open yet" }, { status: 403 });
+    }
     const { amount_sats, txid } = await request.json();
 
     if (!amount_sats || amount_sats <= 0) {
