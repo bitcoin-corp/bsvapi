@@ -3,7 +3,7 @@ import {
   createPaymentRequirement,
   paymentHeaders,
   verifyPayment,
-  finaliseTxid,
+  releaseOnFail,
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateVideo } from "@/lib/atlascloud";
@@ -163,17 +163,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upstream call — if it throws, the outer catch returns 500 and
-    // we deliberately do NOT finaliseTxid. The user can retry with
-    // the same txid without paying twice.
-    const result = await generateVideo({
+    // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
+    const result = await releaseOnFail(verification.txid!, () => generateVideo({
       prompt,
       model: model || "wan-2.1",
       image_url,
       duration,
-    });
-
-    await finaliseTxid(verification.txid!);
+    }));
     logUsage({
       model: serviceKey,
       input_tokens: 0,

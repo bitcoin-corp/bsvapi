@@ -1,14 +1,16 @@
-import { isTxidUsed, recordTxid as dbRecordTxid } from "./db";
+import { claimTxid, isTxidUsed, releaseTxid } from "./db";
 
 /**
- * Re-exported so route handlers can mark a payment as finalised
- * only once the upstream proxy call has succeeded. This is critical
- * for the "user paid, upstream 500'd" failure mode: if we burn the
- * txid at verification time, the user has no way to retry without
- * paying a second time.
+ * Run the upstream call for a payment verifyPayment has already claimed. If it throws, the txid is released so the
+ * payer can retry with the same payment instead of paying twice (the "user paid, upstream 500'd" case).
  */
-export async function finaliseTxid(txid: string): Promise<void> {
-  await dbRecordTxid(txid);
+export async function releaseOnFail<T>(txid: string, call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    await releaseTxid(txid).catch(() => {});
+    throw err;
+  }
 }
 
 /**
@@ -198,12 +200,12 @@ export async function verifyPayment(
       };
     }
 
-    // NOTE: we do NOT mark the txid as used here. The caller must
-    // call finaliseTxid(txid) after the upstream proxy call has
-    // succeeded. Moving recordTxid here would burn the user's
-    // payment even if the upstream call later throws — making the
-    // BSV effectively unrefundable. See commit 48d9af3 for the
-    // live-swarm incident that motivated this split.
+    // Claim the txid atomically now, after the amount checks out. The route runs its upstream call through
+    // releaseOnFail, which gives the txid back if the call throws, so a failed call stays retryable.
+    if (!(await claimTxid(txid))) {
+      return { valid: false, error: "Transaction already used" };
+    }
+
     return {
       valid: true,
       txid,

@@ -3,7 +3,7 @@ import {
   createPaymentRequirement,
   paymentHeaders,
   verifyPayment,
-  finaliseTxid,
+  releaseOnFail,
 } from "@/lib/payment";
 import { getServiceCostSats } from "@/lib/pricing";
 import { generateMusic } from "@/lib/replicate";
@@ -153,11 +153,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upstream call — throws propagate to the outer catch and we
-    // deliberately do NOT finaliseTxid, so the user can retry.
-    const result = await generateMusic({ prompt, duration });
-
-    await finaliseTxid(verification.txid!);
+    // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
+    const result = await releaseOnFail(verification.txid!, () => generateMusic({ prompt, duration }));
     logUsage({
       model: "music-gen",
       input_tokens: 0,

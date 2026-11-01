@@ -239,8 +239,20 @@ export async function isTxidUsed(txid: string): Promise<boolean> {
   return !!data;
 }
 
-export async function recordTxid(txid: string): Promise<void> {
-  await supabase.from("bsvapi_used_txids").insert({ txid });
+/**
+ * Claim a payment txid atomically (the table's primary key). true = this request owns it; false = another request
+ * already claimed or used it. Replaces check-then-record, where two simultaneous requests could both pass.
+ */
+export async function claimTxid(txid: string): Promise<boolean> {
+  const { error } = await supabase.from("bsvapi_used_txids").insert({ txid });
+  if (!error) return true;
+  if (error.code === "23505") return false;
+  throw new Error(`Could not claim payment: ${error.message}`);
+}
+
+/** Give a claimed txid back when the upstream call failed, so the payer can retry with it. */
+export async function releaseTxid(txid: string): Promise<void> {
+  await supabase.from("bsvapi_used_txids").delete().eq("txid", txid);
 }
 
 // --- Stats (Admin) ---
