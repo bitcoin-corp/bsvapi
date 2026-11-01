@@ -1,11 +1,70 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, monospace;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-::selection {
-  background: #f7931a;
-  color: white;
-}
+/* bwalletx.com/family tokens (1 Nov 2026) */
+:root { --bg: #000; --ink: #f4f1e8; --muted: #a9a69c; --dim: #7c7a73; --gold: #f5b800; --card: #0d0e11; --edge: #1f2127;
+  --grad: linear-gradient(180deg, #ffe58a, #ffd24d 55%, #c98f00); --hf: "Space Grotesk", system-ui, sans-serif; }
+::selection { background: var(--gold); color: #000; }
+body { background: var(--bg); color: var(--ink); }
+h1, h2, h3, .brand, b { font-family: var(--hf); }
+
+.fam a { color: inherit; text-decoration: none; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.row { display: flex; align-items: center; justify-content: space-between; }
+.gap { gap: 12px; justify-content: flex-start; flex-wrap: wrap; }
+.top { position: sticky; top: 0; z-index: 10; background: rgba(0,0,0,.8); backdrop-filter: blur(10px); border-bottom: 1px solid var(--edge); }
+.top .row { height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+.brand i, .brand .x { font-style: normal; color: var(--gold); }
+.sq { width: 18px; height: 18px; border-radius: 5px; background: var(--gold); display: inline-block; }
+.links { display: flex; gap: 22px; align-items: center; font-size: 14px; color: var(--muted); }
+.links a:hover { color: var(--ink); }
+.pill { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--edge); color: var(--ink) !important; }
+.hero { padding-top: 96px; padding-bottom: 72px; background: radial-gradient(50% 60% at 70% 30%, rgba(245,184,0,.12), transparent 70%); }
+.kicker { font: 500 12px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 0 0 18px; }
+.hero h1 { margin: 0 0 20px; font-size: clamp(44px, 7vw, 84px); line-height: 1.02; letter-spacing: -.02em; font-weight: 700; }
+.hero h1 span { display: block; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { max-width: 36em; font-size: 19px; line-height: 1.6; color: var(--muted); margin: 0 0 30px; }
+.btn { display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--gold); color: #000 !important; font-weight: 700; font-family: var(--hf); }
+.btn.ghost { background: transparent; color: var(--ink) !important; border: 1px solid var(--edge); }
+.sec { padding-top: 40px; padding-bottom: 56px; border-top: 1px solid var(--edge); }
+.sec h2 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -.01em; margin: 0 0 10px; font-weight: 700; }
+.sub { color: var(--muted); max-width: 40em; line-height: 1.6; margin: 0 0 22px; }
+.cards, .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; margin-bottom: 22px; }
+.card { padding: 20px; border-radius: 16px; border: 1px solid var(--edge); background: var(--card); display: grid; gap: 8px; align-content: start; }
+.card b { font-size: 17px; }
+.card span { color: var(--muted); font-size: 14px; line-height: 1.55; }
+.card .tag { justify-self: start; font: 500 13px var(--font-mono); color: var(--gold); background: rgba(245,184,0,.1); padding: 3px 9px; border-radius: 8px; }
+.card .n { font: 700 28px var(--hf); color: var(--gold); }
+.tbl { width: 100%; border-collapse: collapse; margin: 0 0 18px; font-size: 14px; }
+.tbl th { text-align: left; font-weight: 500; color: var(--dim); padding: 10px 8px; border-bottom: 1px solid var(--edge); }
+.tbl td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.05); color: var(--ink); }
+.tbl code, .ref code, .fine code { font-family: var(--font-mono); font-size: 13px; }
+.code { background: var(--card); border: 1px solid var(--edge); border-radius: 14px; padding: 18px; font: 500 13px/1.7 var(--font-mono); color: var(--muted); overflow-x: auto; white-space: pre; }
+.fine { font-size: 13px; color: var(--dim); }
+.ref { display: grid; gap: 2px; }
+.ref div { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.ref span { color: var(--muted); font-size: 14px; }
+.verb { color: var(--gold); min-width: 42px; }
+.status { list-style: none; padding: 0; margin: 0; }
+.status li { display: flex; gap: 12px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 15px; }
+.st { flex: none; min-width: 104px; text-align: center; font: 700 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--muted); }
+.st.live { background: rgba(34,211,154,.14); color: #22d39a; }
+.foot { padding-top: 28px; padding-bottom: 48px; border-top: 1px solid var(--edge); color: var(--dim); font-size: 13px; }
+.foot a { color: var(--muted); text-decoration: underline; }
+@media (max-width: 560px) { .links a:not(.pill) { display: none; } .tbl { font-size: 13px; } }
+
+/* Dashboard, login and admin were built light; map their zinc palette onto the family dark (no markup rewrite). */
+body .bg-white, body .bg-zinc-50 { background: var(--card); }
+body .text-zinc-900, body .text-black { color: var(--ink); }
+body .text-zinc-600, body .text-zinc-500 { color: var(--muted); }
+body .text-zinc-400 { color: var(--dim); }
+body .border-zinc-100, body .border-zinc-200, body .border-zinc-300 { border-color: var(--edge); }
+body .bg-zinc-900 { background: var(--gold); color: #000; }
+body .hover\:bg-zinc-800:hover { background: #ffd24d; }
+body .hover\:text-zinc-900:hover { color: var(--ink); }
+body input, body select, body textarea { background: var(--card); color: var(--ink); border-color: var(--edge); }

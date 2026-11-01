@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm px-6">
         <a href="/" className="flex items-center gap-2 mb-10">
           <Image
-            src="/images/bsvapi-logo.png"
+            src="/icon.svg"
             alt="BSVAPI"
             width={24}
             height={24}

@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
-
-const mono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-});
-
 export const metadata: Metadata = {
-  title: "BSVAPI",
-  description: "Pay-per-call API access. BSV micropayments. No accounts.",
+  title: "BSVAPI · AI, paid by the call in BSV",
+  description: "Chat, images, video, music and transcription through one OpenAI-compatible API, paid per call in BSV. No card. No account needed.",
+  metadataBase: new URL("https://bsvapi.com"),
+  openGraph: { title: "BSVAPI · AI, paid by the call in BSV", description: "Chat, images, video, music and transcription, paid per call in BSV. No card. No account needed.", url: "/" },
 };
 
 export default function RootLayout({
@@ -23,8 +14,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
-      <body className="bg-white text-zinc-900 antialiased font-sans">
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+        />
+      </head>
+      <body className="antialiased font-sans">
         {children}
       </body>
     </html>
