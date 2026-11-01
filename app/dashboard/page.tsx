@@ -118,7 +118,7 @@ export default function DashboardPage() {
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
             <Image
-              src="/images/bsvapi-logo.png"
+              src="/icon.svg"
               alt="BSVAPI"
               width={24}
               height={24}

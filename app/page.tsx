@@ -1,352 +1,225 @@
-import Image from "next/image";
+// Home in the bwalletx.com/family style (owner, 1 Nov 2026): family fonts and gold, live model list from the router.
+import { MODELS, ALIASES, listChatModels } from "@/lib/router";
+import { getSupportedServices } from "@/lib/pricing";
+
+const MARKUP = parseFloat(process.env.MARKUP_MULTIPLIER || "2");
+const usd = (n: number) => (n === 0 ? "free" : `$${n.toFixed(n < 1 ? 2 : 2)}`);
+
+const ALIAS_WHAT: Record<string, string> = {
+  "b/chat": "Everyday chat",
+  "b/fast": "Quick, cheap replies",
+  "b/smart": "Harder questions",
+};
+
+const STATUS: Array<[boolean, string]> = [
+  [true, "Pay per call in BSV with HTTP 402: no account needed"],
+  [true, "Chat, images, video, music and transcription"],
+  [true, "Task names (b/chat, b/fast, b/smart) with automatic fallback"],
+  [true, "API keys with credits for businesses; failed calls refunded"],
+  [false, "Sign in with bWalletX"],
+  [false, "Self-service deposits and a usage dashboard per project"],
+];
+
+function Code({ children }: { children: string }) {
+  return <pre className="code">{children}</pre>;
+}
 
 export default function Home() {
+  const live = new Set(listChatModels().map((m) => m.id));
+  const chat = MODELS.filter((m) => live.has(m.id));
+  const aliases = Object.keys(ALIASES).filter((a) => live.has(a));
+  const services = getSupportedServices();
   return (
-    <div className="min-h-screen">
-      {/* Nav */}
-      <nav className="border-b border-zinc-200">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2">
-            <Image
-              src="/images/bsvapi-logo.png"
-              alt="BSVAPI"
-              width={24}
-              height={24}
-            />
-            <span className="font-semibold text-sm">BSVAPI</span>
+    <div className="fam">
+      <nav className="top">
+        <div className="wrap row">
+          <a href="/" className="brand">
+            <span className="sq" />
+            <span>
+              BSV<i>API</i>
+            </span>
           </a>
-          <div className="flex items-center gap-5 text-sm text-zinc-500">
-            <a href="#protocol" className="hover:text-zinc-900">
-              Protocol
-            </a>
-            <a href="#pricing" className="hover:text-zinc-900">
-              Pricing
-            </a>
-            <a href="#reference" className="hover:text-zinc-900">
-              Reference
-            </a>
-            <a
-              href="/login"
-              className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800"
-            >
+          <div className="links">
+            <a href="#models">Models</a>
+            <a href="#how">How it works</a>
+            <a href="#reference">Docs</a>
+            <a href="/login" className="pill">
               Sign in
             </a>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
-        <p className="text-sm text-zinc-400 font-mono mb-6">
-          HTTP 402 Payment Required
-        </p>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.15] mb-6">
-          Pay for API calls
-          <br />
-          with Bitcoin SV
+      <header className="wrap hero">
+        <p className="kicker">HTTP 402 · Payment Required</p>
+        <h1>
+          AI, paid by
+          <span>the call in BSV.</span>
         </h1>
-        <p className="text-lg text-zinc-500 max-w-lg mb-10 leading-relaxed">
-          No accounts. No subscriptions. Send a request, pay in satoshis, get
-          your response. OpenAI-compatible endpoints backed by Grok.
+        <p className="lede">
+          Chat, images, video, music and transcription through one OpenAI-compatible API. Pay a few satoshis per call.
+          No card. No account needed.
         </p>
-        <div className="flex gap-3">
-          <a
-            href="#reference"
-            className="px-5 py-2.5 bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
-          >
-            API Reference
+        <div className="row gap">
+          <a className="btn" href="#reference">
+            Read the docs
           </a>
-          <a
-            href="#protocol"
-            className="px-5 py-2.5 text-sm font-medium border border-zinc-300 hover:border-zinc-400"
-          >
-            How it works
+          <a className="btn ghost" href="#models">
+            See the models
           </a>
         </div>
+      </header>
+
+      <section id="models" className="wrap sec">
+        <h2>Models</h2>
+        <p className="sub">Ask for a task name and BSVAPI picks the model, falling back to another if one is down.</p>
+        <div className="cards">
+          {aliases.map((a) => (
+            <div className="card" key={a}>
+              <code className="tag">{a}</code>
+              <b>{ALIAS_WHAT[a] ?? a}</b>
+              <span>{ALIASES[a].filter((id) => live.has(id)).join(" → ")}</span>
+            </div>
+          ))}
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Chat model</th>
+              <th>Input / 1M tokens</th>
+              <th>Output / 1M tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+            {chat.map((m) => (
+              <tr key={m.id}>
+                <td>
+                  <code>{m.id}</code>
+                </td>
+                <td>{usd(m.input * MARKUP)}</td>
+                <td>{usd(m.output * MARKUP)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>What it does</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {services.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <code>{s.id}</code>
+                </td>
+                <td>{s.description}</td>
+                <td>{usd(s.usdPerUnit)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="fine">
+          Prices in US dollars, paid in BSV at the current rate, with a minimum per call. Get the exact price in
+          satoshis first with <code>POST /api/v1/price</code>.
+        </p>
       </section>
 
-      {/* Banner */}
-      <section className="max-w-5xl mx-auto px-6 pb-20">
-        <Image
-          src="/images/BSVAPI_02.jpg"
-          alt="BSV API"
-          width={762}
-          height={229}
-          className="w-full"
-          priority
-        />
-      </section>
-
-      {/* Protocol */}
-      <section id="protocol" className="border-t border-zinc-200">
-        <div className="max-w-5xl mx-auto px-6 py-20">
-          <h2 className="text-2xl font-bold mb-3">Protocol</h2>
-          <p className="text-zinc-500 mb-12 max-w-lg">
-            BSVAPI uses HTTP 402 for payment negotiation. The flow is three
-            requests, or two if you already know the price.
-          </p>
-
-          <div className="space-y-10">
-            {/* Step 1 */}
-            <div className="grid md:grid-cols-[140px_1fr] gap-4">
-              <div>
-                <p className="text-sm font-mono text-zinc-400">Step 1</p>
-                <p className="text-sm font-medium mt-1">Request</p>
-              </div>
-              <div>
-                <p className="text-sm text-zinc-600 mb-3">
-                  Send your request without payment. The server responds with
-                  402 and the price in satoshis.
-                </p>
-                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
-{`POST /api/v1/chat/completions
-Content-Type: application/json
-
-{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}
+      <section id="how" className="wrap sec">
+        <h2>How it works</h2>
+        <div className="steps">
+          <div className="card">
+            <span className="n">1</span>
+            <b>Ask</b>
+            <span>Send your request. BSVAPI answers 402 with the price in satoshis and the address to pay.</span>
+          </div>
+          <div className="card">
+            <span className="n">2</span>
+            <b>Pay</b>
+            <span>Pay that address from bWalletX or any BSV wallet, then resend with the txid in x-bsv-payment.</span>
+          </div>
+          <div className="card">
+            <span className="n">3</span>
+            <b>Get your answer</b>
+            <span>The payment is checked on chain and your answer comes back with a receipt. A failed call can be retried with the same payment.</span>
+          </div>
+        </div>
+        <Code>{`POST /api/v1/chat/completions
+{"model":"b/chat","messages":[{"role":"user","content":"Hello"}]}
 
 ← 402 Payment Required
-← x-bsv-payment-satoshis-required: 500`}
-                </pre>
-              </div>
-            </div>
+← x-bsv-payment-satoshis-required: 500
 
-            {/* Step 2 */}
-            <div className="grid md:grid-cols-[140px_1fr] gap-4">
-              <div>
-                <p className="text-sm font-mono text-zinc-400">Step 2</p>
-                <p className="text-sm font-medium mt-1">Pay</p>
-              </div>
-              <div>
-                <p className="text-sm text-zinc-600 mb-3">
-                  Create a BSV transaction for the required amount. Include the
-                  txid in the{" "}
-                  <code className="text-zinc-900 bg-zinc-100 px-1">
-                    x-bsv-payment
-                  </code>{" "}
-                  header.
-                </p>
-                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
-{`POST /api/v1/chat/completions
-Content-Type: application/json
-x-bsv-payment: a1b2c3d4e5f6...
+POST /api/v1/chat/completions
+x-bsv-payment: <txid>
 
-{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}`}
-                </pre>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="grid md:grid-cols-[140px_1fr] gap-4">
-              <div>
-                <p className="text-sm font-mono text-zinc-400">Step 3</p>
-                <p className="text-sm font-medium mt-1">Receive</p>
-              </div>
-              <div>
-                <p className="text-sm text-zinc-600 mb-3">
-                  Payment is verified on-chain. The request is proxied upstream.
-                  You get the response with a payment receipt.
-                </p>
-                <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
-{`← 200 OK
-
-{
-  "choices": [{
-    "message": {"role":"assistant","content":"Hello! How can I..."}
-  }],
-  "usage": {"prompt_tokens":12,"completion_tokens":84},
-  "payment": {"txid":"a1b2c3...","satoshisPaid":500}
-}`}
-                </pre>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 border-l-2 border-zinc-200 pl-4">
-            <p className="text-sm text-zinc-500">
-              Implements{" "}
-              <span className="text-zinc-700">BRC-0105</span> HTTP Service
-              Monetization. Compatible with{" "}
-              <span className="text-zinc-700">PacketPay</span> clients for
-              automatic payment handling.
-            </p>
-          </div>
-        </div>
+← 200 OK  { "choices": [...], "payment": { "txid": "…", "satoshisPaid": 500 } }`}</Code>
       </section>
 
-      {/* Registered Clients */}
-      <section className="border-t border-zinc-200 bg-zinc-50">
-        <div className="max-w-5xl mx-auto px-6 py-20">
-          <h2 className="text-2xl font-bold mb-3">For businesses</h2>
-          <p className="text-zinc-500 mb-8 max-w-lg">
-            Registered clients get an API key, metered usage, and volume
-            discounts. Calls are invoiced monthly in BSV.
-          </p>
-
-          <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto mb-8">
-{`POST /api/v1/chat/completions
+      <section className="wrap sec">
+        <h2>For businesses</h2>
+        <p className="sub">
+          Registered clients get an API key, prepaid credits in BSV and volume discounts. Calls that fail upstream are
+          refunded, and chat is charged on actual usage.
+        </p>
+        <Code>{`POST /api/v1/chat/completions
 Authorization: Bearer bsvapi_sk_yourcompany_xxx
-Content-Type: application/json
-
-{"model":"grok-3","messages":[{"role":"user","content":"..."}]}
-
-← 200 OK  (no payment header needed — metered to your account)`}
-          </pre>
-
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-zinc-400 border-b border-zinc-200">
-                <th className="pb-2 font-medium">Tier</th>
-                <th className="pb-2 font-medium">Discount</th>
-                <th className="pb-2 font-medium">Billing</th>
-              </tr>
-            </thead>
-            <tbody className="text-zinc-600">
-              <tr className="border-b border-zinc-100">
-                <td className="py-2.5">Internal</td>
-                <td className="py-2.5">50%</td>
-                <td className="py-2.5">Monthly BSV invoice</td>
-              </tr>
-              <tr className="border-b border-zinc-100">
-                <td className="py-2.5">Partner</td>
-                <td className="py-2.5">25%</td>
-                <td className="py-2.5">Monthly BSV invoice</td>
-              </tr>
-              <tr>
-                <td className="py-2.5">External</td>
-                <td className="py-2.5">0%</td>
-                <td className="py-2.5">Monthly BSV invoice</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+{"model":"b/smart","messages":[...]}`}</Code>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="border-t border-zinc-200">
-        <div className="max-w-5xl mx-auto px-6 py-20">
-          <h2 className="text-2xl font-bold mb-3">Pricing</h2>
-          <p className="text-zinc-500 mb-8">
-            2x upstream cost. Paid in BSV at the current exchange rate.
-          </p>
-
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-zinc-400 border-b border-zinc-200">
-                <th className="pb-2 font-medium">Model</th>
-                <th className="pb-2 font-medium text-right">Input</th>
-                <th className="pb-2 font-medium text-right">Output</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-zinc-700">
-              <tr className="border-b border-zinc-100">
-                <td className="py-3">grok-3</td>
-                <td className="py-3 text-right">$6.00 / 1M</td>
-                <td className="py-3 text-right">$30.00 / 1M</td>
-              </tr>
-              <tr className="border-b border-zinc-100">
-                <td className="py-3">grok-3-mini</td>
-                <td className="py-3 text-right">$0.60 / 1M</td>
-                <td className="py-3 text-right">$1.00 / 1M</td>
-              </tr>
-              <tr>
-                <td className="py-3">grok-2</td>
-                <td className="py-3 text-right">$4.00 / 1M</td>
-                <td className="py-3 text-right">$20.00 / 1M</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <p className="text-xs text-zinc-400 mt-4">
-            Use <code className="font-mono">POST /api/v1/price</code> to get
-            the exact cost in satoshis before calling.
-          </p>
-        </div>
-      </section>
-
-      {/* API Reference */}
-      <section id="reference" className="border-t border-zinc-200 bg-zinc-50">
-        <div className="max-w-5xl mx-auto px-6 py-20">
-          <h2 className="text-2xl font-bold mb-8">Reference</h2>
-
-          <div className="space-y-8">
-            <div>
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-xs font-mono font-medium text-zinc-400">
-                  GET
-                </span>
-                <code className="text-sm font-mono">/api/v1/models</code>
-              </div>
-              <p className="text-sm text-zinc-500 mb-3">
-                List available models. No authentication required.
-              </p>
-              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600">
-{`curl https://bsvapi.com/api/v1/models`}
-              </pre>
-            </div>
-
-            <div>
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-xs font-mono font-medium text-zinc-400">
-                  POST
-                </span>
-                <code className="text-sm font-mono">/api/v1/price</code>
-              </div>
-              <p className="text-sm text-zinc-500 mb-3">
-                Get a price estimate in satoshis. No authentication required.
-              </p>
-              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
-{`curl -X POST https://bsvapi.com/api/v1/price \\
-  -H "Content-Type: application/json" \\
-  -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'`}
-              </pre>
-            </div>
-
-            <div>
-              <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-xs font-mono font-medium text-zinc-400">
-                  POST
-                </span>
-                <code className="text-sm font-mono">
-                  /api/v1/chat/completions
-                </code>
-              </div>
-              <p className="text-sm text-zinc-500 mb-3">
-                OpenAI-compatible chat completions. Requires BSV payment or API
-                key.
-              </p>
-              <pre className="bg-white border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
-{`# Anonymous (BSV payment)
-curl -X POST https://bsvapi.com/api/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "x-bsv-payment: <txid>" \\
-  -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'
-
-# Registered client (API key)
-curl -X POST https://bsvapi.com/api/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer bsvapi_sk_yourcompany_xxx" \\
-  -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'`}
-              </pre>
-            </div>
+      <section id="reference" className="wrap sec">
+        <h2>Reference</h2>
+        <div className="ref">
+          <div>
+            <code className="verb">GET</code> <code>/api/v1/models</code>
+            <span>List models, task names and services. Free.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/price</code>
+            <span>Price a request in satoshis before you call it. Free.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/chat/completions</code>
+            <span>OpenAI-compatible chat, streaming supported.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/images/generate</code>
+            <span>Images.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/video/generate</code>
+            <span>Video.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/music/generate</code>
+            <span>Music.</span>
+          </div>
+          <div>
+            <code className="verb">POST</code> <code>/api/v1/transcriptions</code>
+            <span>Speech to text.</span>
           </div>
         </div>
+        <p className="fine">Implements BRC-105 HTTP Service Monetization; works with PacketPay clients.</p>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-200 py-8">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-xs text-zinc-400">
-          <span>
-            A{" "}
-            <a
-              href="https://bitcoin-corp.com"
-              className="text-zinc-600 hover:text-zinc-900"
-            >
-              Bitcoin Corporation
-            </a>{" "}
-            service
-          </span>
-          <span className="font-mono">BRC-0105</span>
-        </div>
+      <section className="wrap sec">
+        <h2>What works today</h2>
+        <ul className="status">
+          {STATUS.map(([ok, text]) => (
+            <li key={text}>
+              <span className={ok ? "st live" : "st"}>{ok ? "Live" : "Not open yet"}</span>
+              {text}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <footer className="wrap foot">
+        BSVAPI is part of the <a href="https://bwalletx.com/family">bWalletX family</a>. Questions:{" "}
+        <a href="mailto:support@bwalletx.com">support@bwalletx.com</a>
       </footer>
     </div>
   );
