@@ -1,6 +1,6 @@
 /**
  * bAI router (ROUTER-PLAN.md): one request names a model id or a task alias (b/chat, b/fast, b/smart); the router tries
- * the cheapest enabled candidate first and falls back to the next on outages, rate limits and 5xx. A provider is
+ * its candidates in order and falls back to the next on outages, rate limits and 5xx. A provider is
  * enabled only when its key is set, so OpenRouter and Anthropic stay off until keys (and credit) exist.
  *
  * Content refusals (4xx other than 408/429) are returned as they are, never retried on another provider: the router
@@ -33,14 +33,19 @@ export const MODELS: ModelEntry[] = [
   { id: "grok-3", provider: "xai", upstream: "grok-3", input: 3, output: 15 },
   { id: "grok-3-mini", provider: "xai", upstream: "grok-3-mini", input: 0.3, output: 0.5 },
   { id: "grok-2", provider: "xai", upstream: "grok-2", input: 2, output: 10 },
-  // OpenRouter / Anthropic entries go here once their keys exist and prices are checked.
+  // OpenRouter free models (no credit needed; rate-limited), checked against openrouter.ai/api/v1/models 1 Nov 2026.
+  // Used as fallbacks after the paid model, so a busy free tier never blocks a call.
+  { id: "gemma-4-31b", provider: "openrouter", upstream: "google/gemma-4-31b-it:free", input: 0, output: 0 },
+  { id: "nemotron-3.5-lightning", provider: "openrouter", upstream: "nvidia/nemotron-3.5-lightning:free", input: 0, output: 0 },
+  { id: "nemotron-3-ultra", provider: "openrouter", upstream: "nvidia/nemotron-3-ultra-550b-a55b:free", input: 0, output: 0 },
+  // Anthropic entries go here once its key and credit exist and prices are checked.
 ];
 
-/** Task aliases: candidate model ids, best first. Disabled providers are skipped; cheapest enabled is tried first. */
+/** Task aliases: candidate model ids in the order to try them. Disabled providers are skipped. */
 export const ALIASES: Record<string, string[]> = {
-  "b/chat": ["grok-3-mini", "grok-3"],
-  "b/fast": ["grok-3-mini"],
-  "b/smart": ["grok-3"],
+  "b/chat": ["grok-3-mini", "gemma-4-31b", "nemotron-3.5-lightning"],
+  "b/fast": ["grok-3-mini", "nemotron-3.5-lightning", "gemma-4-31b"],
+  "b/smart": ["grok-3", "nemotron-3-ultra", "gemma-4-31b"],
 };
 
 const cost = (m: { input: number; output: number }) => m.input + m.output;
@@ -57,13 +62,12 @@ export function candidates(model: string): ModelEntry[] {
   const ids = ALIASES[model] ?? [model];
   const list = ids.map((id) => MODELS.find((m) => m.id === id)).filter((m): m is ModelEntry => !!m && enabled(m));
   if (!ALIASES[model]) return list;
-  return list.sort(
-    (a, b) => Number(recentFailures(a.provider) >= 3) - Number(recentFailures(b.provider) >= 3) || cost(a) - cost(b)
-  );
+  // Keep the alias order; only push a provider with 3+ recent failures to the back (stable sort).
+  return list.sort((a, b) => Number(recentFailures(a.provider) >= 3) - Number(recentFailures(b.provider) >= 3));
 }
 
 /**
- * Price used for a request: an alias is priced at its first (cheapest healthy) candidate, and route() only falls back
+ * Price used for a request: an alias is priced at its first healthy candidate, and route() only falls back
  * to candidates that cost no more, so the payer is never charged for a dearer model than the one that may answer.
  */
 export function priceFor(model: string): { input: number; output: number } | null {
