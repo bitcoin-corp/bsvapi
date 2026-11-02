@@ -60,7 +60,7 @@ export async function getBsvUsdRate(): Promise<number> {
 export async function estimateCostSats(
   model: string,
   messages: Array<{ role: string; content: string }>
-): Promise<{ satoshis: number; usdCost: number; breakdown: string }> {
+): Promise<{ satoshis: number; usdCost: number; breakdown: string; outputTokens: number }> {
   const pricing = priceFor(model);
   if (!pricing) {
     throw new Error(`Unsupported model: ${model}. Available: ${listChatModels().map((m) => m.id).join(", ")}`);
@@ -87,6 +87,9 @@ export async function estimateCostSats(
     satoshis: finalSats,
     usdCost: totalUsd,
     breakdown: `~${estimatedInputTokens} input + ~${estimatedOutputTokens} output tokens @ ${MARKUP}x markup`,
+    // The output budget this price covers. Callers must cap max_tokens to it, or a caller could pay for 500 tokens
+    // and ask for 100k.
+    outputTokens: estimatedOutputTokens,
   };
 }
 

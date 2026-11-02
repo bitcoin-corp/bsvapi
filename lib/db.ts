@@ -130,39 +130,68 @@ export async function getUserApiKeys(userId: string) {
 
 // --- Credit Operations ---
 
+/**
+ * Change a user's balance by `delta` sats with compare-and-swap, so parallel requests can't both spend the same
+ * credits (or lose a top-up). The update only lands if the balance is still the value we read; otherwise re-read and
+ * retry. A debit that would take the balance below zero is refused.
+ *
+ * A Postgres function doing `UPDATE ... SET credits_sats = credits_sats + $delta WHERE credits_sats + $delta >= 0`
+ * plus a CHECK (credits_sats >= 0) constraint would be stronger; that needs a migration (see README, Security).
+ */
+async function adjustCredits(
+  userId: string,
+  delta: number,
+  reason: string,
+  txid?: string
+): Promise<{ success: boolean; balance: number }> {
+  if (!Number.isSafeInteger(delta)) throw new Error("Credit amount must be a whole number of sats");
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const { data: user } = await supabase
+      .from("bsvapi_users")
+      .select("credits_sats")
+      .eq("id", userId)
+      .single();
+
+    if (!user) return { success: false, balance: 0 };
+    const current = Number(user.credits_sats);
+    const newBalance = current + delta;
+    if (newBalance < 0) return { success: false, balance: current };
+
+    const { data: updated, error } = await supabase
+      .from("bsvapi_users")
+      .update({ credits_sats: newBalance, updated_at: new Date().toISOString() })
+      .eq("id", userId)
+      .eq("credits_sats", current)
+      .select("id");
+    if (error) throw new Error(`Credit update failed: ${error.message}`);
+
+    if (updated && updated.length === 1) {
+      await supabase.from("bsvapi_credit_txns").insert({
+        user_id: userId,
+        amount_sats: delta,
+        txid,
+        reason,
+        balance_after: newBalance,
+      });
+      return { success: true, balance: newBalance };
+    }
+    // Someone else changed the balance between our read and write. Back off briefly and try again.
+    await new Promise((r) => setTimeout(r, 20 + Math.random() * 80));
+  }
+  throw new Error("Credit balance is busy, try again");
+}
+
 export async function addCredits(
   userId: string,
   amountSats: number,
   reason: string,
   txid?: string
 ) {
-  // Get current balance
-  const { data: user } = await supabase
-    .from("bsvapi_users")
-    .select("credits_sats")
-    .eq("id", userId)
-    .single();
-
-  if (!user) throw new Error("User not found");
-
-  const newBalance = user.credits_sats + amountSats;
-
-  // Update balance
-  await supabase
-    .from("bsvapi_users")
-    .update({ credits_sats: newBalance, updated_at: new Date().toISOString() })
-    .eq("id", userId);
-
-  // Record transaction
-  await supabase.from("bsvapi_credit_txns").insert({
-    user_id: userId,
-    amount_sats: amountSats,
-    txid,
-    reason,
-    balance_after: newBalance,
-  });
-
-  return newBalance;
+  if (!(amountSats > 0)) throw new Error("Credit amount must be positive");
+  const result = await adjustCredits(userId, amountSats, reason, txid);
+  if (!result.success) throw new Error("User not found");
+  return result.balance;
 }
 
 /**
@@ -187,31 +216,8 @@ export async function deductCredits(
   amountSats: number,
   reason: string
 ): Promise<{ success: boolean; balance: number }> {
-  const { data: user } = await supabase
-    .from("bsvapi_users")
-    .select("credits_sats")
-    .eq("id", userId)
-    .single();
-
-  if (!user) return { success: false, balance: 0 };
-  if (user.credits_sats < amountSats)
-    return { success: false, balance: user.credits_sats };
-
-  const newBalance = user.credits_sats - amountSats;
-
-  await supabase
-    .from("bsvapi_users")
-    .update({ credits_sats: newBalance, updated_at: new Date().toISOString() })
-    .eq("id", userId);
-
-  await supabase.from("bsvapi_credit_txns").insert({
-    user_id: userId,
-    amount_sats: -amountSats,
-    reason,
-    balance_after: newBalance,
-  });
-
-  return { success: true, balance: newBalance };
+  if (!(amountSats > 0)) throw new Error("Debit amount must be positive");
+  return adjustCredits(userId, -amountSats, reason);
 }
 
 // --- Usage Logging ---

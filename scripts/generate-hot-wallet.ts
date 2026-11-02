@@ -1,17 +1,18 @@
 /**
  * Generate a fresh BSV mainnet hot wallet for BSVAPI payment receipts.
  *
- * Prints WIF and P2PKH address to stdout. Does NOT persist the WIF —
- * copy it into .env.local as:
+ * Prints WIF and P2PKH address to stdout. Does NOT persist the WIF.
+ * The server only needs the address:
  *
- *     BSVAPI_HOT_WALLET_WIF=<wif>
  *     BSVAPI_HOT_WALLET_ADDRESS=<address>
+ *
+ * Keep the WIF offline (password manager / hardware backup). The server
+ * never reads it, so it never needs to sit in a deployed env.
  *
  * Usage:
  *     pnpm tsx scripts/generate-hot-wallet.ts
  *
- * The key is only held in memory during the run. After you copy it,
- * nothing on disk has it except your own .env.local.
+ * The key is only held in memory during the run.
  */
 
 import { PrivateKey } from "@bsv/sdk";
@@ -36,17 +37,17 @@ function main() {
   console.log("");
   console.log(banner);
   console.log("");
-  console.log("  Copy these two lines into bsvapi/.env.local:");
+  console.log("  Put the address in the server env (.env.local or your host):");
   console.log("");
-  console.log("    BSVAPI_HOT_WALLET_WIF=" + wif);
   console.log("    BSVAPI_HOT_WALLET_ADDRESS=" + address);
+  console.log("");
+  console.log("  Store the WIF offline. The server does not need it.");
   console.log("");
   console.log(banner);
   console.log("");
   console.log(
-    "  Fund the address with a small amount (e.g. 10,000 sats) so the\n" +
-      "  treasury has something to spend later; payments from users go\n" +
-      "  here automatically once the server is running with these env vars.",
+    "  Payments from callers land at this address once the server is\n" +
+      "  running with BSVAPI_HOT_WALLET_ADDRESS set.",
   );
   console.log("");
 }

@@ -9,12 +9,12 @@ import { getServiceCostSats } from "@/lib/pricing";
 import { transcribe } from "@/lib/replicate";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp, errorResponse } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = clientIp(request);
     const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 60);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -173,10 +173,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Transcription error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Transcription error");
   }
 }

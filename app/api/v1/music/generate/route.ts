@@ -9,12 +9,12 @@ import { getServiceCostSats } from "@/lib/pricing";
 import { generateMusic } from "@/lib/replicate";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp, errorResponse } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = clientIp(request);
     const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 30);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Flat price per call, so cap the length the provider is asked for (it bills by run time).
+    const musicDuration =
+      typeof duration === "number" && duration > 0 ? Math.min(Math.round(duration), 30) : 10;
 
     let cost;
     try {
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:music-gen`, () => generateMusic({ prompt, duration }));
+      const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:music-gen`, () => generateMusic({ prompt, duration: musicDuration }));
 
       logUsage({
         user_id: client.user_id || undefined,
@@ -154,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
-    const result = await releaseOnFail(verification.txid!, () => generateMusic({ prompt, duration }));
+    const result = await releaseOnFail(verification.txid!, () => generateMusic({ prompt, duration: musicDuration }));
     logUsage({
       model: "music-gen",
       input_tokens: 0,
@@ -173,10 +177,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Music generation error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Music generation error");
   }
 }

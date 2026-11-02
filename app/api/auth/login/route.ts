@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserByEmail } from "@/lib/db";
 import { verifyPassword, createSessionToken, sessionCookie } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
+    // Slow down password guessing: 10 attempts per IP per 5 minutes.
+    const rate = await checkRateLimit(`login:${clientIp(request)}`, 5 * 60_000, 10);
+    if (!rate.allowed) {
+      return NextResponse.json({ error: "Too many attempts, try again later" }, { status: 429 });
+    }
+
     const { email, password } = await request.json();
 
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
@@ -40,7 +48,8 @@ export async function POST(request: NextRequest) {
     });
     res.headers.set("Set-Cookie", sessionCookie(token));
     return res;
-  } catch {
+  } catch (err) {
+    console.error("Login error:", err);
     return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

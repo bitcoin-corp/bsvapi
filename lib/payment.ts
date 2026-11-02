@@ -133,13 +133,8 @@ export async function verifyPayment(
   try {
     hotWalletAddress = getHotWalletAddress();
   } catch (err) {
-    return {
-      valid: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : "Hot wallet address is not configured",
-    };
+    console.error("verifyPayment:", err);
+    return { valid: false, error: "Payments are not configured on this server" };
   }
 
   try {
@@ -150,8 +145,9 @@ export async function verifyPayment(
     } catch {
       txid = paymentHeader.trim();
     }
+    if (typeof txid === "string") txid = txid.toLowerCase();
 
-    if (!txid || txid.length !== 64) {
+    if (typeof txid !== "string" || !/^[0-9a-fA-F]{64}$/.test(txid)) {
       return { valid: false, error: "Invalid txid format" };
     }
 
@@ -212,10 +208,8 @@ export async function verifyPayment(
       satoshisPaid: paidToHotWallet,
     };
   } catch (err) {
-    return {
-      valid: false,
-      error: `Payment verification failed: ${err instanceof Error ? err.message : "unknown error"}`,
-    };
+    console.error("verifyPayment:", err);
+    return { valid: false, error: "Payment verification failed, try again" };
   }
 }
 

@@ -4,8 +4,8 @@
 -- Safe to run against an empty database or an existing one; every
 -- CREATE uses IF NOT EXISTS so re-applying is a no-op.
 --
--- Apply against the self-hosted Hetzner Supabase:
---   ssh hetzner "docker exec -i supabase-db psql -U postgres -d postgres" < supabase/migrations/0001_init.sql
+-- Apply with psql against your Postgres / Supabase database:
+--   psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
 --
 -- Or from the Supabase Studio SQL editor by pasting the contents.
 

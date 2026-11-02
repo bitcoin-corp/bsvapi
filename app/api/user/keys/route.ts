@@ -15,23 +15,27 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request);
-    const { name } = await request.json();
+    const body = await request.json();
+    const name = typeof body?.name === "string" && body.name.trim() ? body.name.trim().slice(0, 64) : "default";
 
-    const slug = (name || "default").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 32) || "key";
     const key = generateApiKey(slug);
 
     const client = await saveClient({
       user_id: user.id,
       key,
-      name: name || "default",
+      name,
       tier: "external",
       discount_percent: 0,
     });
 
     return NextResponse.json(client, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed";
-    return NextResponse.json({ error: message }, { status: 401 });
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("app/api/user/keys/route.ts error:", err);
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }
 

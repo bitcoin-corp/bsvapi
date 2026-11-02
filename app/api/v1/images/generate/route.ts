@@ -9,12 +9,12 @@ import { getServiceCostSats } from "@/lib/pricing";
 import { generateImage } from "@/lib/atlascloud";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp, errorResponse } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = clientIp(request);
     const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 30);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -31,12 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { prompt, model, width, height, num_outputs } = body as {
+    const { prompt, model, width, height } = body as {
       prompt?: string;
       model?: string;
       width?: number;
       height?: number;
-      num_outputs?: number;
     };
 
     if (!prompt) {
@@ -46,9 +45,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine service pricing key
-    const serviceKey = model === "flux-schnell" ? "image-flux" : "image-sdxl";
-    const units = num_outputs || 1;
+    // Only models we have priced may reach the provider: forwarding any caller-named model would let a caller run a
+    // dear model at the cheapest price.
+    const IMAGE_MODELS: Record<string, string> = {
+      sdxl: "image-sdxl",
+      "z-image/turbo": "image-sdxl",
+      "flux-schnell": "image-flux",
+      "bytedance/seedream-v5.0-lite": "image-flux",
+    };
+    const imageModel = model ?? "sdxl";
+    const serviceKey = IMAGE_MODELS[imageModel];
+    if (!serviceKey) {
+      return NextResponse.json(
+        { error: `Unsupported image model: ${imageModel}. Available: ${Object.keys(IMAGE_MODELS).join(", ")}` },
+        { status: 400 }
+      );
+    }
+    // One image is generated per call, so one unit is charged. (Pricing by the caller's num_outputs let a negative
+    // or fractional value cut the price to the 100-sat floor, and it was never forwarded anyway.)
+    const units = 1;
 
     let cost;
     try {
@@ -109,7 +124,7 @@ export async function POST(request: NextRequest) {
 
       const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${serviceKey}`, () => generateImage({
         prompt,
-        model: model || "sdxl",
+        model: imageModel,
         width,
         height,
         
@@ -169,7 +184,7 @@ export async function POST(request: NextRequest) {
     // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
     const result = await releaseOnFail(verification.txid!, () => generateImage({
       prompt,
-      model: model || "sdxl",
+      model: imageModel,
       width,
       height,
     }));
@@ -191,10 +206,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Image generation error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Image generation error");
   }
 }

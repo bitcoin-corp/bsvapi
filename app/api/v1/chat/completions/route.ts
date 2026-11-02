@@ -10,11 +10,12 @@ import { type ChatMessage } from "@/lib/grok";
 import { chatCompletion, chatCompletionStream } from "@/lib/router";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail, addCredits } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp, errorResponse } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = clientIp(request);
     const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 60);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -37,23 +38,46 @@ export async function POST(request: NextRequest) {
       stream?: boolean;
     };
 
-    if (!model || !messages?.length) {
+    if (typeof model !== "string" || !Array.isArray(messages) || !messages.length) {
       return NextResponse.json(
         { error: "model and messages are required" },
         { status: 400 }
       );
     }
 
+    // Price is based on message text length, so only plain-text messages are accepted (array/multimodal content
+    // would be priced as a handful of characters) and only role + content are forwarded upstream.
+    const ROLES = new Set(["system", "user", "assistant"]);
+    if (!messages.every((m) => m && ROLES.has(m.role) && typeof m.content === "string")) {
+      return NextResponse.json(
+        { error: "each message needs role (system, user or assistant) and string content" },
+        { status: 400 }
+      );
+    }
+    const cleanMessages: ChatMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
+
     // Calculate base cost
     let cost;
     try {
-      cost = await estimateCostSats(model, messages);
+      cost = await estimateCostSats(model, cleanMessages);
     } catch (err) {
       return NextResponse.json(
         { error: err instanceof Error ? err.message : "Pricing error" },
         { status: 400 }
       );
     }
+
+    // Never let a request generate more output than the price paid for.
+    const maxTokens =
+      typeof max_tokens === "number" && max_tokens > 0
+        ? Math.min(Math.floor(max_tokens), cost.outputTokens)
+        : cost.outputTokens;
+    const upstreamRequest = {
+      model,
+      messages: cleanMessages,
+      temperature: typeof temperature === "number" ? temperature : undefined,
+      max_tokens: maxTokens,
+    };
 
     // Check for API key auth
     const authHeader = request.headers.get("authorization");
@@ -103,12 +127,7 @@ export async function POST(request: NextRequest) {
 
       // Streaming mode
       if (stream) {
-        const { stream: sseStream } = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletionStream({
-          model,
-          messages,
-          temperature,
-          max_tokens,
-        }));
+        const { stream: sseStream } = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletionStream(upstreamRequest));
 
         // Log estimated usage (actual tokens unknown until stream ends)
         logUsage({
@@ -131,12 +150,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Non-streaming
-      const grokResponse = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletion({
-        model,
-        messages,
-        temperature,
-        max_tokens,
-      }));
+      const grokResponse = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${model}`, () => chatCompletion(upstreamRequest));
 
       const usage = grokResponse.usage;
       const realCostSats = await actualCostSats(
@@ -209,12 +223,7 @@ export async function POST(request: NextRequest) {
     // Streaming for anonymous payment
     if (stream) {
       // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
-      const { stream: sseStream } = await releaseOnFail(verification.txid!, () => chatCompletionStream({
-        model,
-        messages,
-        temperature,
-        max_tokens,
-      }));
+      const { stream: sseStream } = await releaseOnFail(verification.txid!, () => chatCompletionStream(upstreamRequest));
       logUsage({
         model,
         input_tokens: 0,
@@ -234,12 +243,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
-    const grokResponse = await releaseOnFail(verification.txid!, () => chatCompletion({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-    }));
+    const grokResponse = await releaseOnFail(verification.txid!, () => chatCompletion(upstreamRequest));
     logUsage({
       model,
       input_tokens: grokResponse.usage?.prompt_tokens || 0,
@@ -258,10 +262,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Chat completions error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Chat completions error");
   }
 }

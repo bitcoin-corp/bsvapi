@@ -9,12 +9,12 @@ import { getServiceCostSats } from "@/lib/pricing";
 import { generateVideo } from "@/lib/atlascloud";
 import { getClientByApiKey, logUsage, deductCredits, refundOnFail } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIp, errorResponse } from "@/lib/http";
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const ip = clientIp(request);
     const rateCheck = await checkRateLimit(`ip:${ip}`, 60_000, 20);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -45,8 +45,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine service pricing key
-    const serviceKey = model === "kling" ? "video-kling" : "video-wan";
+    // Only models we have priced may reach the provider (see the images route). These are the ids this route has
+    // always sent; any other caller-named provider model is refused instead of being run at the Wan price.
+    const VIDEO_MODELS: Record<string, string> = {
+      "wan-2.1": "video-wan",
+      kling: "video-kling",
+    };
+    const videoModel = model ?? "wan-2.1";
+    const serviceKey = VIDEO_MODELS[videoModel];
+    if (!serviceKey) {
+      return NextResponse.json(
+        { error: `Unsupported video model: ${videoModel}. Available: ${Object.keys(VIDEO_MODELS).join(", ")}` },
+        { status: 400 }
+      );
+    }
 
     let cost;
     try {
@@ -107,7 +119,7 @@ export async function POST(request: NextRequest) {
 
       const result = await refundOnFail(client.user_id, effectiveCostSats, `api_call:${serviceKey}`, () => generateVideo({
         prompt,
-        model: model || "wan-2.1",
+        model: videoModel,
         image_url,
         duration,
       }));
@@ -166,7 +178,7 @@ export async function POST(request: NextRequest) {
     // Upstream call. If it throws, releaseOnFail frees the txid so the payer can retry without paying twice.
     const result = await releaseOnFail(verification.txid!, () => generateVideo({
       prompt,
-      model: model || "wan-2.1",
+      model: videoModel,
       image_url,
       duration,
     }));
@@ -188,10 +200,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Video generation error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(err, "Video generation error");
   }
 }

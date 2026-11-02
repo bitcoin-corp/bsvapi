@@ -1,8 +1,7 @@
 /**
  * Atlas Cloud provider client.
  *
- * Known-working endpoints cribbed from NPGX's src/lib/ai/atlas-image.ts
- * and wan-video.ts, which run against the same account.
+ * Endpoints used:
  *
  *   POST /api/v1/model/generateImage   (sync when enable_sync_mode:true)
  *   POST /api/v1/model/generateVideo   (async, returns an id to poll)
@@ -17,7 +16,7 @@ const ATLASCLOUD_KEY = (process.env.ATLASCLOUD_API_KEY || "").trim();
 
 /** Default image model — cheapest Atlas option at $0.01/image */
 const DEFAULT_IMAGE_MODEL = "z-image/turbo";
-/** Default video model — used by NPGX's Wan 2.2 pipeline */
+/** Default video model when the caller passes none */
 const DEFAULT_VIDEO_MODEL = "alibaba/wan-2.2-spicy/image-to-video-lora";
 
 export interface ImageRequest {

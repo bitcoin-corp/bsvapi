@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
     }
     const { amount_sats, txid } = await request.json();
 
-    if (!amount_sats || amount_sats <= 0) {
+    if (!Number.isSafeInteger(amount_sats) || amount_sats <= 0) {
       return NextResponse.json(
-        { error: "amount_sats must be positive" },
+        { error: "amount_sats must be a positive whole number" },
         { status: 400 }
       );
     }
@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ credits_sats: newBalance });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed";
-    return NextResponse.json({ error: message }, { status: 401 });
+    if (err instanceof Error && err.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("app/api/user/credits/route.ts error:", err);
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }

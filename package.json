@@ -2,7 +2,8 @@
   "name": "bsvapi",
   "version": "2.0.0",
   "private": true,
-  "description": "Pay-per-call API gateway. No accounts. No subscriptions. Just BSV.",
+  "description": "Pay-per-call AI API paid in BSV (HTTP 402).",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

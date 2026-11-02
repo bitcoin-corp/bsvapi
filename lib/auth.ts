@@ -1,12 +1,30 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import { createHash, timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 import { supabase } from "./supabase";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "bsvapi-dev-secret-change-me"
-);
 const COOKIE_NAME = "bsvapi_session";
+const JWT_ALG = "HS256";
+
+/**
+ * The session-signing secret. There is deliberately no fallback: a default secret in public source would let anyone
+ * mint a session for any user id, admins included. Read lazily so `next build` works without it.
+ */
+function jwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET ?? "";
+  if (secret.length < 32) {
+    throw new Error("JWT_SECRET must be set to at least 32 characters (e.g. `openssl rand -hex 32`)");
+  }
+  return new TextEncoder().encode(secret);
+}
+
+/** Constant-time string compare (hashing first so unequal lengths don't short-circuit). */
+function safeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
 
 export interface SessionUser {
   id: string;
@@ -29,10 +47,10 @@ export async function verifyPassword(
 
 export async function createSessionToken(userId: string): Promise<string> {
   return new SignJWT({ sub: userId })
-    .setProtectedHeader({ alg: "HS256" })
+    .setProtectedHeader({ alg: JWT_ALG })
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(JWT_SECRET);
+    .sign(jwtSecret());
 }
 
 export function sessionCookie(token: string): string {
@@ -40,7 +58,7 @@ export function sessionCookie(token: string): string {
 }
 
 export function clearSessionCookie(): string {
-  return `${COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0`;
+  return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 
 export async function getSession(
@@ -49,8 +67,10 @@ export async function getSession(
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
+  // Outside the try: a missing JWT_SECRET is a server misconfiguration and should fail loudly, not look like "logged out".
+  const secret = jwtSecret();
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret, { algorithms: [JWT_ALG] });
     const userId = payload.sub;
     if (!userId) return null;
 
@@ -77,10 +97,10 @@ export async function requireAuth(
 export async function requireAdmin(
   request: NextRequest
 ): Promise<SessionUser> {
-  // Allow ADMIN_API_KEY header for backward compat
-  const auth = request.headers.get("authorization");
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (adminKey && auth === `Bearer ${adminKey}`) {
+  // Allow ADMIN_API_KEY header for backward compat. Ignored unless it is long enough to resist guessing.
+  const auth = request.headers.get("authorization") ?? "";
+  const adminKey = process.env.ADMIN_API_KEY ?? "";
+  if (adminKey.length >= 32 && safeEqual(auth, `Bearer ${adminKey}`)) {
     return {
       id: "admin",
       email: "admin",
