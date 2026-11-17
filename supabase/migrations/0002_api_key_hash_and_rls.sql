@@ -46,7 +46,7 @@ ALTER TABLE public.bsvapi_api_keys
     ADD COLUMN IF NOT EXISTS key_prefix text;
 
 -- Backfill from the plaintext while it still exists (part B removes the column). key_prefix matches
--- lib/api-key-hash.ts apiKeyPrefix(): the first min(len - 8, 24) characters plus an ellipsis.
+-- lib/api-key-hash.ts apiKeyPrefix(): an ellipsis plus the key's last 4 characters (<= 8 chars, CHECKed below).
 DO $backfill$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns
@@ -54,7 +54,7 @@ BEGIN
         EXECUTE $q$
             UPDATE public.bsvapi_api_keys
                SET key_hash = encode(sha256(convert_to(key, 'UTF8')), 'hex'),
-                   key_prefix = left(key, least(length(key) - 8, 24)) || '…'
+                   key_prefix = '…' || right(key, 4)
              WHERE key IS NOT NULL AND key_hash IS NULL
         $q$;
         -- New rows carry no plaintext: let `key` be NULL until part B drops it.
@@ -66,7 +66,9 @@ $backfill$;
 ALTER TABLE public.bsvapi_api_keys ALTER COLUMN key_hash SET NOT NULL;
 ALTER TABLE public.bsvapi_api_keys
     DROP CONSTRAINT IF EXISTS bsvapi_api_keys_key_hash_format,
-    ADD CONSTRAINT bsvapi_api_keys_key_hash_format CHECK (key_hash ~ '^[0-9a-f]{64}$');
+    ADD CONSTRAINT bsvapi_api_keys_key_hash_format CHECK (key_hash ~ '^[0-9a-f]{64}$'),
+    DROP CONSTRAINT IF EXISTS bsvapi_api_keys_key_prefix_short,
+    ADD CONSTRAINT bsvapi_api_keys_key_prefix_short CHECK (key_prefix IS NULL OR char_length(key_prefix) <= 8);
 CREATE UNIQUE INDEX IF NOT EXISTS bsvapi_api_keys_key_hash_key ON public.bsvapi_api_keys (key_hash);
 
 -- RLS + explicit grants on every bsvapi table. No browser role needs any of them (server-only, service key).

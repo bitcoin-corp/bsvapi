@@ -18,10 +18,15 @@ test("hash is sha256 hex of the key, and matches only the same key (constant-tim
   assert.match(src("lib/api-key-hash.ts"), /timingSafeEqual/);
 });
 
-test("prefix never reveals the secret part", () => {
-  const p = apiKeyPrefix(KEY);
-  assert.ok(p.endsWith("…"));
-  assert.ok(p.length - 1 <= 24 && KEY.length - (p.length - 1) >= 8);
+test("key_prefix is at most 8 characters and shows only the last 4 of the key", () => {
+  for (const k of [KEY, "bsvapi_sk_x_" + "f".repeat(32), "short1234"]) {
+    const p = apiKeyPrefix(k);
+    assert.ok(p.length <= 8, p);
+    assert.equal(p, "…" + k.slice(-4));
+  }
+  const m = src("supabase/migrations/0002_api_key_hash_and_rls.sql");
+  assert.match(m, /CHECK \(key_prefix IS NULL OR char_length\(key_prefix\) <= 8\)/);
+  assert.match(m, /key_prefix = '…' \|\| right\(key, 4\)/);
 });
 
 test("db.ts looks keys up by key_hash only, never stores or returns plaintext or the hash", () => {

@@ -16,7 +16,11 @@ export function apiKeyHashMatches(storedHash: string | null | undefined, present
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-/** What the dashboard shows after creation: enough to recognise the key, useless to use it. */
+/**
+ * What the dashboard shows after creation: '…' plus the key's LAST 4 characters (5 chars, <= 8 by DB CHECK).
+ * Enough to tell keys apart, and it reveals 16 bits of a 128-bit random part (a leading prefix would reveal the
+ * fixed 'bsvapi_sk_<slug>_' text plus random characters, and is longer).
+ */
 export function apiKeyPrefix(key: string): string {
-  return `${key.slice(0, Math.min(key.length - 8, 24))}…`;
+  return `…${key.slice(-4)}`;
 }
