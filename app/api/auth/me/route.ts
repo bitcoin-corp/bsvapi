@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     user,
     apiKeys: keys.map((k) => ({
       id: k.id,
-      key: k.key,
+      key_prefix: k.key_prefix,
       name: k.name,
       tier: k.tier,
       discount_percent: k.discount_percent,

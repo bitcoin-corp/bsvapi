@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     // Authenticated client — deduct credits and proxy
     if (client) {
       // Rate limit by key too
-      const keyRate = await checkRateLimit(`key:${client.key}`, 60_000, 120);
+      const keyRate = await checkRateLimit(`key:${client.id}`, 60_000, 120);
       if (!keyRate.allowed) {
         return NextResponse.json(
           { error: "API key rate limit exceeded" },

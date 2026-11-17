@@ -78,6 +78,11 @@ export default function AdminDashboard() {
       body: JSON.stringify(newClient),
     });
     if (res.ok) {
+      // The full key exists only in this response (the server stores sha256(key)): show it once, copyable.
+      const created = await res.json();
+      if (typeof created?.key === "string") {
+        window.prompt("Copy the new API key now. It is stored only as a hash and will not be shown again:", created.key);
+      }
       setNewClient({
         name: "",
         slug: "",

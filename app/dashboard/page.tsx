@@ -14,7 +14,7 @@ interface User {
 
 interface ApiKey {
   id: string;
-  key: string;
+  key_prefix: string;
   name: string;
   tier: string;
   discount_percent: number;
@@ -40,6 +40,8 @@ export default function DashboardPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  // The full key exists only in this response: the server stores sha256(key). Shown once, then gone.
+  const [freshKey, setFreshKey] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const [meRes, usageRes] = await Promise.all([
@@ -73,6 +75,8 @@ export default function DashboardPage() {
       body: JSON.stringify({ name: newKeyName || "default" }),
     });
     if (res.ok) {
+      const created = await res.json();
+      setFreshKey(typeof created?.key === "string" ? created.key : null);
       setNewKeyName("");
       fetchData();
     }
@@ -189,6 +193,20 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {freshKey && (
+            <div className="border border-amber-300 bg-amber-50 p-3 mb-3">
+              <p className="text-xs text-amber-800 mb-1">
+                Copy your new key now. It is stored only as a hash and will not be shown again.
+              </p>
+              <button
+                onClick={() => copyKey(freshKey)}
+                className="text-xs font-mono text-zinc-800 break-all text-left"
+              >
+                {copiedKey === freshKey ? "Copied!" : freshKey}
+              </button>
+            </div>
+          )}
+
           {apiKeys.length === 0 ? (
             <p className="text-sm text-zinc-400">
               No API keys yet. Create one to get started.
@@ -202,12 +220,7 @@ export default function DashboardPage() {
                 >
                   <div>
                     <p className="text-sm font-medium">{k.name}</p>
-                    <button
-                      onClick={() => copyKey(k.key)}
-                      className="text-xs font-mono text-zinc-500 hover:text-zinc-900"
-                    >
-                      {copiedKey === k.key ? "Copied!" : k.key}
-                    </button>
+                    <p className="text-xs font-mono text-zinc-500">{k.key_prefix}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
@@ -236,7 +249,7 @@ export default function DashboardPage() {
           <pre className="bg-zinc-50 border border-zinc-200 p-4 text-xs font-mono text-zinc-600 overflow-x-auto">
 {`curl -X POST https://bsvapi.com/api/v1/chat/completions \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${apiKeys[0]?.key || "bsvapi_sk_your_key"}" \\
+  -H "Authorization: Bearer ${freshKey || "bsvapi_sk_your_key"}" \\
   -d '{"model":"grok-3-mini","messages":[{"role":"user","content":"Hello"}]}'`}
           </pre>
         </div>

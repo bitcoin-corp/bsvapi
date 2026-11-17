@@ -1,12 +1,13 @@
 import { supabase } from "./supabase";
 import crypto from "crypto";
+import { hashApiKey, apiKeyHashMatches, apiKeyPrefix } from "./api-key-hash";
 
 // --- Types ---
 
 export interface Client {
   id: string;
   user_id: string;
-  key: string;
+  key_prefix: string;
   name: string;
   tier: string;
   discount_percent: number;
@@ -29,26 +30,37 @@ export interface UsageLog {
 
 // --- API Key Operations ---
 
+/** Columns safe to return to callers: never key_hash (and there is no plaintext key column any more). */
+const CLIENT_COLUMNS = "id, user_id, key_prefix, name, tier, discount_percent, active, created_at";
+
 export async function getClientByApiKey(
   apiKey: string
 ): Promise<Client | null> {
+  if (typeof apiKey !== "string" || apiKey.length < 16 || apiKey.length > 256) return null;
+  // Look up by sha256(key), then confirm the stored digest in constant time.
   const { data } = await supabase
     .from("bsvapi_api_keys")
-    .select("*")
-    .eq("key", apiKey)
+    .select(`${CLIENT_COLUMNS}, key_hash`)
+    .eq("key_hash", hashApiKey(apiKey))
     .eq("active", true)
-    .single();
-  return data;
+    .maybeSingle();
+  if (!data || !apiKeyHashMatches(data.key_hash, apiKey)) return null;
+  const { key_hash: _omit, ...client } = data;
+  return client as Client;
 }
 
 export async function getClients(): Promise<Client[]> {
   const { data } = await supabase
     .from("bsvapi_api_keys")
-    .select("*")
+    .select(CLIENT_COLUMNS)
     .order("created_at", { ascending: false });
   return data || [];
 }
 
+/**
+ * Store a NEW key: only sha256(key) and a display prefix are written. Returns the row plus the plaintext key
+ * (`key`) so the creating route can show it to its owner exactly once.
+ */
 export async function saveClient(client: {
   user_id: string;
   key: string;
@@ -56,14 +68,15 @@ export async function saveClient(client: {
   tier: string;
   discount_percent: number;
   active?: boolean;
-}): Promise<Client> {
+}): Promise<Client & { key: string }> {
+  const { key, ...rest } = client;
   const { data, error } = await supabase
     .from("bsvapi_api_keys")
-    .insert({ ...client, active: client.active ?? true })
-    .select()
+    .insert({ ...rest, key_hash: hashApiKey(key), key_prefix: apiKeyPrefix(key), active: client.active ?? true })
+    .select(CLIENT_COLUMNS)
     .single();
   if (error) throw error;
-  return data;
+  return { ...(data as Client), key };
 }
 
 export async function updateClient(
@@ -74,7 +87,7 @@ export async function updateClient(
     .from("bsvapi_api_keys")
     .update(updates)
     .eq("id", id)
-    .select()
+    .select(CLIENT_COLUMNS)
     .single();
   if (error) throw error;
   return data;
@@ -122,7 +135,7 @@ export async function getUserById(id: string) {
 export async function getUserApiKeys(userId: string) {
   const { data } = await supabase
     .from("bsvapi_api_keys")
-    .select("*")
+    .select(CLIENT_COLUMNS)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return data || [];
@@ -320,7 +333,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
 export async function getClientStats() {
   const { data: keys } = await supabase
     .from("bsvapi_api_keys")
-    .select("*")
+    .select(CLIENT_COLUMNS)
     .order("created_at", { ascending: false });
 
   if (!keys?.length) return [];
@@ -346,7 +359,7 @@ export async function getClientStats() {
           id: key.id,
           name: key.name,
           slug: key.name,
-          apiKey: key.key,
+          apiKey: key.key_prefix, // prefix only: the key itself is stored as sha256
           tier: key.tier,
           discountPercent: key.discount_percent,
           active: key.active,
